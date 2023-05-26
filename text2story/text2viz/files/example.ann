@@ -1,0 +1,40 @@
+T1 Participant 0 12 Ruben Filipe
+A1 Lexical_Head T1 Noun
+A2 Individuation_Domain T1 Individual
+A3 Participant_Type_Domain T1 Per
+A4 Involvement T1 1
+T2 Participant 45 50 Porto
+A5 Lexical_Head T2 Noun
+A6 Individuation_Domain T2 Individual
+A7 Participant_Type_Domain T2 Loc
+A8 Involvement T2 1
+T4 Participant 34 36 He
+A9 Lexical_Head T4 Pronoun
+A10 Individuation_Domain T4 Individual
+A11 Participant_Type_Domain T4 Other
+A12 Involvement T4 1
+T5 Participant 16 32 a Portuguese boy
+A13 Lexical_Head T5 Noun
+A14 Individuation_Domain T5 Individual
+A15 Participant_Type_Domain T5 Other
+A16 Involvement T5 1
+T6 Participant 64 71 in 1999
+A17 Lexical_Head T6 Noun
+A18 Individuation_Domain T6 Individual
+A19 Participant_Type_Domain T6 Other
+A20 Involvement T6 1
+T3 Time 67 71 1999
+A21 TemporalFunction T3 Publication_Time
+T7 Event 13 15 is
+E1 EVENT:T7
+A22 Class E1 Occurrence
+A23 Tense E1 Pres
+A24 Polarity E1 Pos
+A25 Factuality E1 Factual
+T8 Event 37 63 is from Porto was born
+E2 EVENT:T8
+A26 Class E2 Occurrence
+A27 Tense E2 Pres
+A28 Polarity E2 Pos
+A29 Factuality E2 Factual
+R1 OBJ_REL_objIdentity Arg1:T1 Arg2:T4

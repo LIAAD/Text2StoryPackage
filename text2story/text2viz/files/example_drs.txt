@@ -1,0 +1,15 @@
+» EVENTS
+# T7 (is) -> a
+# FOL:  exists a.event(a)
+# DRS:  ([a],[event(a)]) 
+
+# T8 (is from Porto was born) -> c
+# FOL:  exists c.event(c)
+# DRS:  ([c],[event(c)]) 
+
+» ACTORS
+# T4 -> He
+# T1 -> Ruben Filipe
+
+» RELATIONS
+# T1 - objIdentity - T4

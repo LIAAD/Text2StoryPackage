@@ -1,0 +1,14 @@
+{
+	"framenet_spark":
+	{
+		"language":"pt",
+		"tools":
+		{
+			"participant":"sparknlp",
+			"event":"allennlp",
+			"time":"py_heideltime",
+			"srlink":"allennlp"
+		},
+		"data":"../../../Data/framenet/"
+	}
+}

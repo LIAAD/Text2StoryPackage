@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+		<style type="text/css">
+			#mynetwork {
+				width: 1280px;
+				height: 720px;
+				border: 1px solid lightgray;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div id="mynetwork"></div>
+
+		<script type="text/javascript">
+			// create an array with nodes
+			var actorsDict = JSON.parse('{{actors | safe}}');
+
+			nodesArray = []
+			for (const [key, value] of Object.entries(actorsDict)) {
+				nodesArray.push({ id: key, label: value })
+			}
+
+			var nodes = new vis.DataSet(nodesArray);
+
+			// create an array with edges
+			nonEvRels = JSON.parse('{{non_ev_rels | safe}}');
+			evRels = JSON.parse('{{ev_rels | safe}}');
+
+			relsArray = []
+
+			nonEvRels.forEach(element => relsArray.push({ from: element[0], to: element[2], label: element[1] }));
+
+			evRels.forEach(element => relsArray.push({ from: element[0], to: element[2], label: element[1] }));
+
+			var edges = new vis.DataSet(relsArray)
+
+			// create a network
+			var container = document.getElementById("mynetwork");
+			var data = {
+				nodes: nodes,
+				edges: edges,
+			};
+			var options = {
+				layout: {
+					randomSeed: 3,
+					improvedLayout: true,
+					clusterThreshold: 500,
+					hierarchical: {
+						enabled: true,
+						levelSeparation: 200,
+						nodeSpacing: 200,
+						treeSpacing: 200,
+						blockShifting: true,
+						edgeMinimization: true,
+						parentCentralization: true,
+						direction: 'UD',        // UD, DU, LR, RL
+						sortMethod: 'hubsize',  // hubsize, directed
+						shakeTowards: 'leaves'  // roots, leaves
+					}
+				},
+				physics: {
+					enabled: false,
+				}
+			};
+			var network = new vis.Network(container, data, options);
+		</script>
+	</body>
+</html>

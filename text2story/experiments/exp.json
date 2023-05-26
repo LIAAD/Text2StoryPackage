@@ -1,0 +1,26 @@
+{
+	"lusa_spacy_custom":
+	{
+		"language":"pt",
+		"tools":
+		{
+			"participant":"spacy",
+			"event":"custompt",
+			"time":"py_heideltime",
+			"srlink":"allennlp"
+		},
+		"data":"../annotators/CUSTOMPT/data/test/"
+	},
+	"lusa_spark_allen":
+	{
+		"language":"pt",
+		"tools":
+		{
+			"participant":"sparknlp",
+			"event":"allennlp",
+			"time":"py_heideltime",
+			"srlink":"allennlp"
+		},
+		"data":"../annotators/CUSTOMPT/data/test/"
+	}
+}

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+    <head>
+	<!-- Required meta tags -->
+	        <meta charset="utf-8">
+		        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+			        <!-- Bootstrap CSS -->
+				        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css"
+							                   integrity="sha384-B0vP5xmATw1+K9KRQjQERJvTumQW0nPEzvF6L/Z6nronJ3oUOFUFpCjEUQouq2+l" crossorigin="anonymous">
+
+					<title>Brat2Viz</title>
+    </head>
+
+    <body>
+	      <h1>Brat2Viz</h1>
+
+  <form id="drs-form" method="POST" action="{{ url_for('brat2viz') }}">
+            <div class="container mt-4">
+                    <div class="form-group">
+                        <div class="row">
+                            <div class="col-sm">
+                                <select onchange='this.form.submit();' class="custom-select" name="select_drs" id="drs_select">
+                                    {% for drs in drs_files %}
+                                    <option value="{{drs}}" {% if drs==selected_drs %} selected="selected" {% endif %}>
+                                        {{drs}}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <a href={{brat_url}} target="_blank">View on Brat</a>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+
+            <div class="container mt-4">
+                <div class="form-group" id="viz_type">
+                    <div class="row">
+
+                        <div class="col-sm d-flex justify-content-center">
+                            <div class="custom-control custom-radio">
+                                <input onchange='this.form.submit();' type="radio" id="news_text" name="select_vis" class="custom-control-input"
+                                    value="news_text" {% if selected_vis=="news_text" %} checked="checked" {% endif %}>
+                                <label class="custom-control-label" for="news_text">News</label>
+                            </div>
+                        </div>
+                        <div class="col-sm d-flex justify-content-center">
+                            <div class="custom-control custom-radio">
+                                <input onchange='this.form.submit();' type="radio" id="ann_text" name="select_vis" class="custom-control-input"  
+                                    value="ann_text" {% if selected_vis=="ann_text" %} checked="checked" {% endif %}>
+                                <label class="custom-control-label" for="ann_text">Annotation</label>
+                            </div>
+                        </div>
+                        <div class="col-sm d-flex justify-content-center">
+                            <div class="custom-control custom-radio">
+                                <input onchange='this.form.submit();' type="radio" id="drs_text" name="select_vis" class="custom-control-input"
+                                    value="drs_text" {% if selected_vis=="drs_text" %} checked="checked" {% endif %}>
+                                <label class="custom-control-label" for="drs_text">DRS</label>
+                            </div>
+                        </div>
+                        <div class="col-sm d-flex justify-content-center">
+                            <div class="custom-control custom-radio">
+                                <input onchange='this.form.submit();' type="radio" id="msc" name="select_vis" class="custom-control-input" value="msc" {%
+                                    if selected_vis=="msc" %} checked="checked" {% endif %}>
+                                <label class="custom-control-label" for="msc">MSC</label>
+                            </div>
+                        </div>
+                        <div class="col-sm d-flex justify-content-center">
+                            <div onchange='this.form.submit();' class="custom-control custom-radio">
+                                <input type="radio" id="graph" name="select_vis" class="custom-control-input" value="graph"
+                                    {% if selected_vis=="graph" %} checked="checked" {% endif %}>
+                                <label class="custom-control-label" for="graph">Graph</label>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </form>
+
+
+ <!--       <form class="form-inline" id="drs-form" method="POST" action="{{ url_for('brat2viz') }}">
+            <div class="form-group">
+                <div class="input-group">
+                    <select name="select_drs" id="drs_select">
+                        {% for drs in drs_files %}
+                        <option value="{{drs}}" {% if drs == selected_drs %} selected="selected" {% endif %}>
+                            {{drs}}
+                        </option>"
+                        {% endfor %}
+                    </select>
+
+                    <div class="vis_type" id="vis_type">
+                        <input type="radio" id="news_text" name="select_vis" value="news_text" {% if selected_vis == "news_text" %} checked="checked" {% endif %}> news text <br>
+                        <input type="radio" id="ann_text" name="select_vis" value="ann_text" {% if selected_vis == "ann_text" %} checked="checked" {% endif %}> ann text <br>
+                        <input type="radio" id="drs_text" name="select_vis" value="drs_text" {% if selected_vis == "drs_text" %} checked="checked" {% endif %}> drs text <br>
+                        <input type="radio" id="msc" name="select_vis" value="msc" {% if selected_vis == "msc" %} checked="checked" {% endif %}> msc <br>
+                        <input type="radio" id="graph" name="select_vis" value="graph" {% if selected_vis == "graph" %} checked="checked" {% endif %}> graph <br>
+                    </div>
+		     <button type="submit">Submit</button>
+                </div>
+            </div>
+ </form>-->
+        
+        {% if selected_vis == 'msc' %}
+            {% include 'mscgen.html' %}
+        {% elif selected_vis == 'graph' %}
+            {% include 'graph.html' %}
+        {% else %}
+            {% include 'display_text.html' %}
+        {% endif %}
+
+    </body>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='utils.js') }}"></script>
+    
+</html>
