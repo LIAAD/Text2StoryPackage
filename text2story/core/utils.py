@@ -10,6 +10,8 @@
 
 from itertools import tee
 
+import warnings
+
 import numpy as np
 from typing import Tuple, List
 
@@ -160,3 +162,60 @@ def pairwise(iterable):
     a, b = tee(iterable)
     next(b, None)
     return zip(a, b)
+
+def merge_dicts(d1, d2):
+    for k2 in d2:
+        for attr in d2[k2]:
+            if k2 in d1:
+                if attr in d1[k2]:
+                    d1[k2][attr] += d2[k2][attr]
+                else:
+                    d1[k2][attr] = d2[k2][attr]
+
+            else:
+                d1[k2] = {attr:d2[k2][attr]}
+
+def capfirst(s):
+    return s[:1].upper() + s[1:]
+
+def reset_offset_ann(doc, txt, start_offset=0, start_txt=0):
+    """
+    Given a document in tokencorpus format, looks for the spans in txt
+    and then reset the span
+    @param doc: A TokenCorpus LIst
+    @param txt: a string
+    @return: a token corpus list with new spans
+    """
+    start = start_txt
+    for tok in doc:
+        if tok.offset >= start_offset:
+            start_tok = txt.find(tok.text, start)
+            if start_tok == -1:
+                warnings.warn("reset_offset_ann: The token %s was not found in given text." % tok.text)
+            else:
+                #print(">>", tok.text, tok.offset, start_tok)
+                tok.offset = start_tok
+                start = start_tok + len(tok.text)
+
+    return doc
+
+def diff_ann(doc1, doc2):
+    ann1 = {}
+    for tok in doc1:
+        if tok.attr is not None:
+            for id in tok.id_ann:
+                if id in ann1:
+                    ann1[id] = ann1[id] + " " + tok.text
+                else:
+                    ann1[id] = tok.text
+    ann2 = {}
+    for tok in doc2:
+        if tok.attr is not None:
+            for id in tok.id_ann:
+                if id in ann2:
+                    ann2[id] = ann2[id] + " " + tok.text
+                else:
+                    ann2[id] = tok.text
+
+
+

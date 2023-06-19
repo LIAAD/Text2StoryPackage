@@ -3,11 +3,12 @@
 
 	Narrative class
 """
+import warnings
 
 from text2story.core.annotator import Annotator
 from text2story.core.entity_structures import *
 from text2story.core.link_structures import *
-from text2story.core.utils import pairwise
+from text2story.core.utils import pairwise, capfirst, join_tokens
 
 
 class Narrative:
@@ -74,8 +75,136 @@ class Narrative:
         self.actors = {}
         self.times = {}
         self.events = {}
-        self.obj_links = {}
-        self.sem_links = {}
+        self.spatial_relations = {}
+
+        self.links = {}
+
+        self.sem_role_map = {"participant":"agent","event":"cause"}
+        #self.obj_links = {}
+        #self.sem_links = {}
+
+        #self.temp_links = {}
+        #self.subordination_links = {}
+        #self.qualitative_spatial_links = {}
+        #self.movement_links = {}
+        # self.measure_links = {}
+
+
+
+    @classmethod
+    def fromTokenCorpus(cls, lang,  doc):
+        """
+        build a narrative object from a list of TokenCorpus objects
+
+        @return: a narrative object
+
+        """
+
+        cls.lang = lang
+        cls.publication_time = None
+
+        cls.actors = {}
+        cls.times = {}
+        cls.events = {}
+        cls.spatial_relations = {}
+        cls.links = {}
+
+        # first collect only the annotations
+        n = len(doc)
+        i = 0
+        map_id_tok = {}
+        rel_set = set()
+        doc_txt = ""
+        while i < n:
+
+            for idx, id_ann in enumerate(doc[i].id_ann):
+                if id_ann in map_id_tok:
+                    map_id_tok[id_ann] = (map_id_tok[id_ann][0] + [i],\
+                                          map_id_tok[id_ann][1],\
+                                          map_id_tok[id_ann][2])
+                else:
+                    ann_type, ann_map = doc[i].attr[idx]
+                    map_id_tok[id_ann] = ([i], ann_type, ann_map)
+
+            # collect relations
+            for rel in doc[i].relations:
+                if rel.rel_id not in rel_set:
+
+                    rel_type = rel.rel_type.split("_")
+
+                    main_type = rel_type[0]
+                    subtype = rel_type[1]
+                    if rel.argn == "arg2":
+                        arg1 = doc[i].id_ann[0]
+                        arg2 = rel.toks[0].id_ann[0]
+                    else:
+                        arg2 = doc[i].id_ann[0]
+                        arg1 = rel.toks[0].id_ann[0]
+
+                    linkObj = createLinkObject(arg1,arg2,main_type, subtype, rel.rel_id)
+                    if main_type in cls.links:
+                        cls.links[main_type].append(linkObj)
+                    else:
+                        cls.links[main_type] = [linkObj]
+
+                    rel_set.add(rel.rel_id)
+
+            doc_txt = doc_txt + doc[i].text + " "
+            i += 1
+
+        for id_ann in map_id_tok:
+            # the tokens of this annotation
+            idx_lst, ann_type, ann_map = map_id_tok[id_ann]
+            text = [doc[i].text for i in idx_lst]
+            text = join_tokens(text)
+
+            span_start = doc[idx_lst[0]].offset
+            span_end = doc[idx_lst[-1]].offset + len(doc[idx_lst[-1]].text)
+
+            if ann_type == "Participant":
+
+                lexical_head = ann_map.get("Lexical_Head","")
+
+                participant_type = ann_map.get("Participant_Type_Domain","")
+                cls.actors[id_ann] = ActorEntity(text, (span_start, span_end), lexical_head, actor_type=participant_type)
+            elif ann_type == "Event":
+                event_class = ann_map.get("Class", "")
+                event_polarity = ann_map.get("Polarity","Pos")
+                event_type = ann_map.get("Event_Type","Occurrence")
+                event_pos = ann_map.get("Pos","Verb")
+                event_tense = ann_map.get("Tense","Pres")
+                event_aspect = ann_map.get("Aspect","Perfective")
+
+                cls.events[id_ann] = EventEntity(text, (span_start, span_end),event_class=event_class,\
+                                                 polarity=event_polarity,type=event_type,pos=event_pos,\
+                                                 tense=event_tense,aspect=event_aspect)
+            elif ann_type == "Time":
+                # annotations :: [(TimeStartOffset, TimeEndOffset, TimeType, TimeValue)]
+                time_type = ann_map.get("Time_Type","Time")
+                temporal_function = ann_map.get("TemporalFunction","Publication_Time")
+                cls.times[id_ann] = TimeEntity(text,(span_start,span_end),
+                                                                 time_type, temporal_function=temporal_function)
+            elif ann_type == "Spatial_Relation":
+                spatial_relation_type = ann_map.get("Type","Topological")
+                topological = ann_map.get("Topological","Equal")
+                pathDefining = ann_map.get("PathDefining","Starts")
+                cls.spatial_relations[id_ann] = SpatialRelationEntity(text, (span_start, span_end),\
+                                                                      type=spatial_relation_type,\
+                                                                      topological=topological,
+                                                                      pathDefining=pathDefining)
+
+            else:
+                warnings.warn("Annotation type not recognized: %s -> %s" % (id_ann, ann_type))
+
+
+
+        narrativeSelf = cls(lang,doc_txt,"2023")
+        narrativeSelf.actors = cls.actors
+        narrativeSelf.events = cls.events
+        narrativeSelf.times = cls.times
+        narrativeSelf.spatial_relations = cls.spatial_relations
+        narrativeSelf.links = cls.links
+        return narrativeSelf
 
     def extract_actors(self, *tools):
         """
@@ -136,7 +265,8 @@ class Narrative:
 
         for event in events.itertuples():
             self.events["T" + str(self._id)
-                        ] = EventEntity(event.actor, event.char_span)
+                        ] = EventEntity(event.actor, event.char_span, event_class="Occurrence",\
+                                        polarity="Pos", factuality="Factual",tense="Pres")
             self._id += 1
 
         return self.events
@@ -156,6 +286,7 @@ class Narrative:
         # annotations ::
         clusters = Annotator(tools).extract_objectal_links(
             self.lang, self.text)
+        obj_links = []
 
         for cluster in clusters:
             for i in range(0, len(cluster) - 1):
@@ -172,11 +303,12 @@ class Narrative:
                     arg2 = self._add_actor(e2)
 
                 # (Type (sameHead, partOf, ...), Arg1, Arg2)
-                self.obj_links['R' + str(self._rel_id)
-                               ] = ObjectalLink(arg1, arg2)
+                subtype = type='objIdentity'
+                obj_links.append(ObjectalLink(arg1, arg2, subtype, "R" + str(self._rel_id)))
                 self._rel_id += 1
 
-        return self.obj_links
+        self.links["OLINK"] = obj_links
+        return obj_links
 
     def extract_semantic_role_links(self, *tools):
         """
@@ -230,6 +362,7 @@ class Narrative:
             sentence_df["key"] = key_list
 
         # MAKE SEMANTIC ROLE LINK ENTITIES
+        sem_links = []
         for sentence_df in srl_by_sentence:
             for row1, row2 in pairwise(sentence_df.itertuples()):
                 sem1 = row1.sem_role_type
@@ -244,15 +377,16 @@ class Narrative:
                     if actor == "None" or event == "None":
                         continue
 
-                    self.sem_links["R" + str(self._rel_id)] = SemanticRoleLink(
-                        actor, event, sem_role.lower())
+                    sem_links.append(SemanticRoleLink(
+                        actor, event, self.sem_role_map[sem_role.lower()], "R" + str(self._rel_id)))
                     self._rel_id += 1
 
-        return self.sem_links
+        self.links["SRLINK"] =sem_links
+        return sem_links
 
     def _add_srlink(self, actor, event, sem_role):
-        self.sem_links["R" + str(self._rel_id)
-                       ] = SemanticRoleLink(actor, event, sem_role.lower())
+        self.links["SRLINKS"]["R" + str(self._rel_id)
+                       ] = SemanticRoleLink(actor, event, self.sem_role_map[sem_role.lower()], "R" + str(self._rel_id))
         self._rel_id += 1
 
     def _get_actor_key(self, char_span, match_type="exact"):
@@ -347,7 +481,8 @@ class Narrative:
         """
         key = 'T' + str(self._id)
         self.events[key] = EventEntity(
-            self.text[char_span[0]:char_span[1]], char_span)
+            self.text[char_span[0]:char_span[1]], char_span,  event_class="Occurrence",\
+                                        polarity="Pos", factuality="Factual",tense="Pres")
 
         self._id += 1
 
@@ -435,6 +570,18 @@ class Narrative:
                   ' ' + time_id + ' ' + time.temporal_function + '\n')
             attribute_id += 1
 
+        for spatialRelation_id in self.spatial_relations:
+            spatialRelation = self.spatial_relations[spatialRelation_id]
+
+            r += (spatialRelation_id + '\t' + 'Spatial_Relation' + ' ' + str(spatialRelation.character_span[0]) + ' ' + str(
+                spatialRelation.character_span[1]) + '\t' + spatialRelation.text + '\n')
+
+            attr_dct = vars(spatialRelation)
+            for att in attr_dct:
+                if att != "character_span" and att != "text":
+                    r +=(f"A{attribute_id}\t{capfirst(att)} {spatialRelation_id} {attr_dct[att]}\n")
+                    attribute_id += 1
+
         for event_id in self.events:
 
             event = self.events[event_id]
@@ -461,19 +608,8 @@ class Narrative:
             # pdb.set_trace()
             attribute_id += 1
 
-        for objectal_link_id in self.obj_links:
-            obj_link = self.obj_links[objectal_link_id]
-
-            # R34 OBJ_REL_objIdentity Arg1:T3 Arg2:T1
-            #r += (objectal_link_id + '\t' + 'OBJ_REL_' + obj_link.type + ' ' + 'Arg1:' + obj_link.arg1 + ' ' + 'Arg2:' + obj_link.arg2 + '\n')
-            r += (objectal_link_id + '\t' + 'OLINK_' + obj_link.type + ' ' +
-                  'Arg1:' + obj_link.arg1 + ' ' + 'Arg2:' + obj_link.arg2 + '\n')
-
-        for sem_link_id in self.sem_links:
-            sem_link = self.sem_links[sem_link_id]
-
-            # R35 SEMROLE_theme Arg1:E1 Arg2:T1
-        #	r += (f"{sem_link_id}\tSEMROLE_{sem_link.type} Arg1:{sem_link.event} Arg2:{sem_link.actor}\n")
-            r += (f"{sem_link_id}\tSRLINK_{sem_link.type} Arg1:{sem_link.event} Arg2:{sem_link.actor}\n")
+        for link_type in self.links:
+            for link in self.links[link_type]:
+                r += str(link) + "\n"
 
         return r

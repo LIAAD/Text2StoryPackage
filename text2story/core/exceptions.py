@@ -22,3 +22,14 @@ class InvalidTool(Exception):
 		description = ('Invalid tool: ' + tool)
 		
 		super().__init__(description)
+
+
+class InvalidLink(Exception):
+	"""
+	Raised if the user specified an invalid/unsupported tool.
+	"""
+
+	def __init__(self, link):
+		description = ('Invalid link: ' + link)
+
+		super().__init__(description)

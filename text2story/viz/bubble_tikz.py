@@ -1,11 +1,12 @@
 from text2story.select.bubble import BubbleMap, BigBubble, Bubble 
 from text2story.readers.read_brat import ReadBrat
-import pdflatex as ptex
 from pdf2image import convert_from_path
 
 import os
 import re
 import sys
+
+from latexcompiler import LC
 
 tikz_doc = "\\documentclass{standalone}\n\\usepackage{pgf,tikz}\n\\usetikzlibrary{arrows}\n\\usepackage{listofitems} % for \\readlist to create arrays"
 
@@ -404,7 +405,7 @@ def build_fig_ann(ann_file, output_dir):
     #Serao apenas as relações temporais que nao envolvam reporting events ligado pelo TLINK identity.
     tikz_str, bubble_map = build_fig(data, "Reporting", ["TLINK"])
 
-    bubble_map.to_json("output.txt")
+    bubble_map.to_json(os.path.join(output_dir,"output.txt"))
 
     ann_file_base = os.path.basename(ann_file)
 
@@ -412,16 +413,20 @@ def build_fig_ann(ann_file, output_dir):
     with open(output_file, "w") as fd:
         fd.write(tikz_str)
 
-    pdfl = ptex.PDFLaTeX.from_texfile(output_file)
+    LC.compile_document(tex_engine="pdflatex", bib_engine="bibtex",no_bib=True, path=output_file, folder_name=output_dir)
+    #pdfl = ptex.PDFLaTeX.from_texfile(output_file)
     #os.system("pdflatex -halt-on-error -output-directory %s %s" % (output_dir, output_file))
 
     pdf_file = os.path.join(output_dir, "%s.pdf" % ann_file_base)
 
-    pdf, log, completed_process = pdfl.create_pdf()
-    with open(pdf_file, 'wb') as pdfout:
-        pdfout.write(pdf)
+    #pdf, log, completed_process = pdfl.create_pdf()
+    #with open(pdf_file, 'wb') as pdfout:
+    #    pdfout.write(pdf)
 
     png_file = os.path.join(output_dir, "%s.png" % ann_file_base)
+    log_file = os.path.join(output_dir, "%s.log" % ann_file_base)
+    aux_file = os.path.join(output_dir, "%s.aux" % ann_file_base)
+    sync_file = os.path.join(output_dir, "%s.synctex.gz" % ann_file_base)
 
     pages = convert_from_path(pdf_file, 500)
     for page in pages:
@@ -429,6 +434,6 @@ def build_fig_ann(ann_file, output_dir):
         page.save(png_file, 'PNG')
 
     #os.system("convert  -density 600 %s  %s" % (pdf_file, png_file))
-    os.system("rm %s" % (pdf_file))
+    os.system("rm %s %s %s %s" % (pdf_file, log_file, aux_file, sync_file))
 
 

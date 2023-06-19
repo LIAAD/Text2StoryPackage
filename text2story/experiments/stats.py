@@ -21,16 +21,67 @@ def count_elements(fd, element_type):
 
     return count
 
-def build_stats_byelement(data_dir, element_type="event", dataset_type="BRAT"):
+def build_stats_byelement(doc,  element_type="event", dataset_type="BRAT"):
+
+    attr_count = {}
+    nelements = 0
+
+    for tok in doc:
+        for ann_type, attr_map in tok.attr:
+            if ann_type.lower() == element_type:
+                nelements += 1
+                for attr in attr_map:
+                    if attr in attr_count:
+                        if attr_map[attr] in attr_count[attr]:
+                            attr_count[attr][attr_map[attr]] +=  1
+                        else:
+                            attr_count[attr][attr_map[attr]] = 1
+                    else:
+                        attr_count[attr] = {attr_map[attr]:1}
+
+    return attr_count, nelements
+
+def build_stats_byrelation(doc):
+    rel_stats = {}
+    rel_set = set()
+
+    for tok in doc:
+        for rel in tok.relations:
+            if rel.rel_id not in rel_set:
+
+                rel_type = rel.rel_type.split("_")
+                maintype = rel_type[0]
+                subtype = rel_type[1]
+
+                if maintype in rel_stats:
+                    if subtype in rel_stats[maintype]:
+                        rel_stats[maintype][subtype] += 1
+                    else:
+                        rel_stats[maintype][subtype] = 1
+                else:
+                    rel_stats[maintype] = {subtype:1}
+
+    return rel_stats
+
+def build_stats_byelement_batch(data_dir, element_type="event", dataset_type="BRAT"):
     """
 
-    Cou
+    Count a given type element
 
     @param data_dir: A string of data directory
     @param dataset_type: default type assumes the BRAT standoff format
     @return: dict of {attribute:frequency}
     """
-    pass
+    reader = ReadBrat()
+    doc_lst = reader.process(data_dir)
+    attr_count = {}
+
+
+    for doc in doc_lst:
+        attr_count.update(build_stats_byelement(doc, element_type, dataset_type))
+
+    return attr_count
+
 
 def build_stats(data_dir):
 

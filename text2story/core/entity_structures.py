@@ -60,10 +60,10 @@ class TimeEntity:
         Possible values are: 'None' or 'Publication_Time'.
     """
 
-    def __init__(self, text, character_span, value, timex_type, temporal_function='Publication_Time'):
+    def __init__(self, text, character_span, timex_type, temporal_function='Publication_Time'):
         self.text = text
         self.character_span = character_span
-        self.value = value
+        #self.value = value
         self.type = timex_type
         self.temporal_function = temporal_function
 
@@ -74,10 +74,21 @@ class EventEntity:
         TODO: Annotations (A)
     """
 
-    def __init__(self, text, character_span, event_class="Occurrence", polarity="Pos"):
+    def __init__(self, text, character_span,**kwargs):
         self.text = text
         self.character_span = character_span
-        self.event_class = event_class
-        self.polarity = polarity
+
+        for attr_name, attr_value in kwargs.items():
+            setattr(self,attr_name, attr_value)
+
         self.factuality = "Factual"
         self.tense = "Pres"
+
+class SpatialRelationEntity:
+    def __init__(self, text, character_span,**kwargs):
+        self.text = text
+        self.character_span = character_span
+
+        for attr_name, attr_value in kwargs.items():
+            setattr(self,attr_name, attr_value)
+

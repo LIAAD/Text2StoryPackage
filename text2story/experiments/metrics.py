@@ -218,7 +218,7 @@ def compute_relax_scores_entity(ann_pred, ann_target):
     for target in ann_target:
         ans, id_ans = partial_search_annotation(target, interval_pred_lst)
         if ans == -1:
-            search_target[target["id"]] = id_ans
+            search_target[target["id"]] = None
         else:
             search_target[target["id"]] = id_ans
 

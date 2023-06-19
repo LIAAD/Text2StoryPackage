@@ -136,7 +136,7 @@ class ReadBrat(read.Read):
         1, if el1 < el2, -1, if el1 > el2, and 0 if el1 is not adjacent to el2
         """
 
-        if "offset2_start" in el1 and "offset2_start" in el2:
+        if "offset2" in el1 and "offset2" in el2:
             return 0
 
         (left1_start, left1_end) = self._get_left_span(el1)
@@ -162,7 +162,7 @@ class ReadBrat(read.Read):
     def _build_merged_element(self, el1, el2):
 
         new_el = {}
-        if "offset2_start" in el1:
+        if "offset2" in el1:
 
             new_el["offset1"] = (el1["offset1"][0], el1["offset1"][1])
 
@@ -173,7 +173,7 @@ class ReadBrat(read.Read):
             # the union if make in the first offset
             new_el["offset1"] = (el1["offset1"][0], el2["offset1"][1])
             if "offset2" in el2:
-                new_el["offset2"] = (el2["offset2"][0], el2["offset2_end"][1])
+                new_el["offset2"] = (el2["offset2"][0], el2["offset2"][1])
 
         new_el["value"] = el1["value"] + " " + el2["value"]
         new_el["id"] = el1["id"]
@@ -237,13 +237,14 @@ class ReadBrat(read.Read):
             if ent_type in LINK_TYPES:
                 new_ann[ent_type] = ann[ent_type]
                 continue # if it is a link, just ignore it
-
+            #if "offset2_end" not in ann[ent_type]:
+            #    print("-->", ann[ent_type])
             new_ann_ent = self.merge_span(ann[ent_type])
             new_ann[ent_type] = new_ann_ent
 
         return new_ann
 
-    def read_annotation_file(self, file_ann, merge_entities=True):
+    def read_annotation_file(self, file_ann, merge_entities=False):
         """
         It reads only the annotation file, then returns
         the processed tokens as TokenCorpus type
@@ -274,11 +275,11 @@ class ReadBrat(read.Read):
                             # this situation is when the annotation of th event
                             # is two segments not adjacents
                             offset1_start = int(line_toks[2])
-                            offset1_end = int(line_toks[4])
+                            offset2_end = int(line_toks[4])
 
-                            offset2 = line_toks[3].split(';')
-                            offset2_start = int(offset2[0])
-                            offset2_end = int(offset2[1])
+                            offset_toks = line_toks[3].split(';')
+                            offset1_end = int(offset_toks[0])
+                            offset2_start = int(offset_toks[1])
 
                             value = " ".join(line_toks[5:])
 
@@ -319,17 +320,24 @@ class ReadBrat(read.Read):
         else:
             return ann
 
-    def process(self, data_dir):
+    def process(self, data_dir, split=None):
         """
         It reads a set of files of annotations and text, then returns
         the processed tokens as TokenCorpus type
 
         @param string: path of data to gather and process
+        @param string: a file name that contains a list of the files in data dir that
+        should be processed by this reader
 
         @return [[TokenCorpus]]: a list of lists of tokens
         """
         # process the data corpus
         # and return a list of tokens
+        split_lst = []
+        if split is not None:
+            with open(split, "r") as fd:
+                split_lst = fd.readlines()
+                split_lst = [line.replace("\n","") for line in split_lst]
 
         data_tokens = []
 
@@ -338,6 +346,9 @@ class ReadBrat(read.Read):
                 if f.endswith(".ann"):
 
                     p = Path(f)
+                    if split_lst != [] and not(p.stem + ".txt" in split_lst):
+                        continue
+                 
                     fullname = os.path.join(data_dir, p.stem)
                     token_lst = self.process_file(fullname)
                     self.file_lst.append(fullname + ".txt")
@@ -519,7 +530,11 @@ class ReadBrat(read.Read):
                     ref = line_toks[2]
                     if ref in ann_ref:
                         #ann_ref[ref][1].append((line[1], line[3]))
-                        ann_ref[ref][line_toks[1]] = line_toks[3]
+                        if len(line_toks) > 3:
+                            ann_ref[ref][line_toks[1]] = line_toks[3]
+                        else:
+                            ann_ref[ref][line_toks[1]] = line_toks[1]
+
                     else:
                         ann_ref[ref] = {line_toks[1]:line_toks[3]}
 
@@ -553,7 +568,6 @@ class ReadBrat(read.Read):
                         for rel_id, rel_type, ref_arg,argn in ann_rel[ref]:
                             rel_obj = token_corpus.TokenRelation(rel_id, ref2tok[ref_arg], rel_type, argn, ref_arg)
                             mytok.relations.append(rel_obj)
-
 
         return token_lst
 
@@ -633,6 +647,7 @@ class ReadBrat(read.Read):
 
     def __process_annotations(self, file_ann, ann, ann_ref):
         pass
+
 
     def fileToColumnFormat(self, ann_file, output_file):
         """
