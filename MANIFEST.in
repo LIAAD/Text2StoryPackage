@@ -3,7 +3,9 @@
 include text2story/annotators/ALLENNLP/Models/srl-pt_bertimbau-base/Vocabulary/*.txt
 include text2story/annotators/ALLENNLP/Models/srl-pt_bertimbau-base/config.json
 include text2story/annotators/ALLENNLP/Models/srl-pt_bertimbau-base/linear_layer.pt
+include text2story/annotators/ALLENNLP/requirements.txt
 include text2story/annotators/CUSTOMPT/crf_v2.1.joblib
+include text2story/annotators/BERTNERPT/POS_tagger_brill.pkl
 include text2story/readers/vn-lirics.json
 include text2story/readers/fn-lirics.json
 include text2story/readers/pb-vn2.json
