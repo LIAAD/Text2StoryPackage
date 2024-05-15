@@ -4,448 +4,334 @@
 #
 #    pip-compile pyproject.toml
 #
-aiohttp==3.8.4
+altair==4.2.2
     # via
-    #   datasets
-    #   fsspec
-aiosignal==1.3.1
-    # via aiohttp
-allennlp==2.9.3
-    # via
-    #   allennlp-models
+    #   streamlit
     #   text2story (pyproject.toml)
-allennlp-models==2.9.3
-    # via text2story (pyproject.toml)
-async-timeout==4.0.2
-    # via aiohttp
-attrs==18.2.0
+astor==0.8.1
+    # via streamlit
+attrs==23.2.0
     # via
-    #   aiohttp
-    #   pdflatex
-    #   pytest
+    #   jsonschema
+    #   referencing
+    #   streamlit
 base58==2.1.1
-    # via allennlp
+    # via streamlit
 beautifulsoup4==4.12.2
-    # via gdown
+    # via text2story (pyproject.toml)
+blinker==1.8.1
+    # via streamlit
 blis==0.7.9
     # via
     #   spacy
     #   thinc
-boto3==1.26.140
-    # via cached-path
-botocore==1.29.140
-    # via
-    #   boto3
-    #   s3transfer
-cached-path==1.1.2
-    # via
-    #   allennlp
-    #   text2story (pyproject.toml)
-cachetools==5.3.0
-    # via google-auth
+cachetools==5.3.3
+    # via streamlit
 catalogue==2.0.8
     # via
     #   spacy
     #   srsly
     #   thinc
 certifi==2023.5.7
-    # via
-    #   requests
-    #   sentry-sdk
+    # via requests
 charset-normalizer==2.0.12
-    # via
-    #   aiohttp
-    #   requests
-click==8.1.3
+    # via requests
+click==7.1.2
     # via
     #   nltk
-    #   sacremoses
+    #   streamlit
     #   typer
-    #   wandb
-conllu==4.4.1
-    # via allennlp-models
+cmake==3.27.5
+    # via triton
+contourpy==1.1.1
+    # via matplotlib
+cycler==0.11.0
+    # via matplotlib
 cymem==2.0.7
     # via
     #   preshed
     #   spacy
     #   thinc
-datasets==2.10.1
-    # via
-    #   allennlp-models
-    #   text2story (pyproject.toml)
-dill==0.3.6
-    # via
-    #   allennlp
-    #   datasets
-    #   multiprocess
-docker-pycreds==0.4.0
-    # via wandb
-elementpath==4.1.2
-    # via text2story (pyproject.toml)
 emoji==2.0.0
     # via py-heideltime
-fairscale==0.4.6
-    # via allennlp
-filelock==3.6.0
+entrypoints==0.4
+    # via altair
+filelock==3.12.4
     # via
-    #   allennlp
-    #   cached-path
-    #   gdown
     #   huggingface-hub
+    #   torch
     #   transformers
-frozenlist==1.3.3
-    # via
-    #   aiohttp
-    #   aiosignal
-fsspec[http]==2023.5.0
-    # via datasets
-ftfy==6.1.1
-    # via allennlp-models
-gdown==4.7.1
-    # via text2story (pyproject.toml)
-gitdb==4.0.10
+    #   triton
+fonttools==4.42.1
+    # via matplotlib
+fsspec==2023.9.1
+    # via huggingface-hub
+gitdb==4.0.11
     # via gitpython
-gitpython==3.1.31
-    # via wandb
-google-api-core==2.11.0
-    # via
-    #   google-cloud-core
-    #   google-cloud-storage
-google-auth==2.17.3
-    # via
-    #   google-api-core
-    #   google-cloud-core
-    #   google-cloud-storage
-    #   text2story (pyproject.toml)
-google-cloud-core==2.3.2
-    # via google-cloud-storage
-google-cloud-storage==2.9.0
-    # via cached-path
-google-crc32c==1.5.0
-    # via google-resumable-media
-google-resumable-media==2.5.0
-    # via google-cloud-storage
-googleapis-common-protos==1.59.0
-    # via google-api-core
-h5py==3.8.0
-    # via allennlp
+gitpython==3.1.43
+    # via streamlit
+grandalf==0.8
+    # via netgraph
 httplib2==0.22.0
     # via plantuml
-huggingface-hub==0.5.1
-    # via
-    #   allennlp
-    #   cached-path
-    #   datasets
-    #   transformers
+huggingface-hub==0.17.2
+    # via transformers
 idna==3.4
-    # via
-    #   requests
-    #   yarl
-inflect==5.6.2
+    # via requests
+importlib-metadata==6.8.0
     # via text2story (pyproject.toml)
-iniconfig==2.0.0
-    # via pytest
+importlib-resources==6.0.1
+    # via matplotlib
 jinja2==3.1.2
-    # via spacy
-jmespath==1.0.1
     # via
-    #   boto3
-    #   botocore
+    #   altair
+    #   pydeck
+    #   spacy
+    #   torch
 joblib==1.2.0
     # via
     #   nltk
-    #   sacremoses
-    #   scikit-learn
     #   text2story (pyproject.toml)
-jsonnet==0.20.0
-    # via allennlp
+jsonschema==4.22.0
+    # via altair
+jsonschema-specifications==2023.12.1
+    # via jsonschema
+kiwisolver==1.4.5
+    # via matplotlib
 langcodes==3.3.0
     # via spacy
-lmdb==1.4.1
-    # via allennlp
+latexcompiler==1.0
+    # via text2story (pyproject.toml)
+lit==16.0.6
+    # via triton
 markupsafe==2.1.2
     # via jinja2
-more-itertools==9.1.0
-    # via allennlp
-multidict==6.0.4
+matplotlib==3.8.0
     # via
-    #   aiohttp
-    #   yarl
-multiprocess==0.70.14
-    # via datasets
+    #   netgraph
+    #   text2story (pyproject.toml)
+mpmath==1.3.0
+    # via sympy
 murmurhash==1.0.9
     # via
     #   preshed
     #   spacy
     #   thinc
-nltk==3.8.1
+netgraph==4.12.11
+    # via text2story (pyproject.toml)
+networkx==3.1
     # via
-    #   allennlp
-    #   allennlp-models
     #   text2story (pyproject.toml)
+    #   torch
+nltk==3.8.1
+    # via text2story (pyproject.toml)
 numpy==1.23.5
     # via
-    #   allennlp
+    #   altair
     #   blis
-    #   datasets
-    #   h5py
+    #   contourpy
+    #   matplotlib
+    #   netgraph
     #   pandas
     #   pyarrow
-    #   scikit-learn
+    #   pydeck
     #   scipy
     #   spacy
-    #   tensorboardx
-    #   text2story (pyproject.toml)
+    #   streamlit
     #   thinc
-    #   torchtext
-    #   torchvision
     #   transformers
-overrides==3.1.0
-    # via text2story (pyproject.toml)
+nvidia-cublas-cu11==11.10.3.66
+    # via
+    #   nvidia-cudnn-cu11
+    #   nvidia-cusolver-cu11
+    #   torch
+nvidia-cuda-cupti-cu11==11.7.101
+    # via torch
+nvidia-cuda-nvrtc-cu11==11.7.99
+    # via torch
+nvidia-cuda-runtime-cu11==11.7.99
+    # via torch
+nvidia-cudnn-cu11==8.5.0.96
+    # via torch
+nvidia-cufft-cu11==10.9.0.58
+    # via torch
+nvidia-curand-cu11==10.2.10.91
+    # via torch
+nvidia-cusolver-cu11==11.4.0.1
+    # via torch
+nvidia-cusparse-cu11==11.7.4.91
+    # via torch
+nvidia-nccl-cu11==2.14.3
+    # via torch
+nvidia-nvtx-cu11==11.7.91
+    # via torch
 packaging==23.1
     # via
-    #   datasets
     #   huggingface-hub
-    #   pytest
+    #   matplotlib
     #   spacy
-    #   tensorboardx
+    #   streamlit
     #   transformers
 pandas==1.5.3
     # via
-    #   datasets
+    #   altair
+    #   streamlit
     #   text2story (pyproject.toml)
-pathtools==0.1.2
-    # via wandb
 pathy==0.10.1
     # via spacy
 pdf2image==1.16.3
     # via text2story (pyproject.toml)
-pdflatex==0.1.3
-    # via text2story (pyproject.toml)
-pillow==9.5.0
+pillow==10.0.1
     # via
+    #   matplotlib
     #   pdf2image
-    #   torchvision
+    #   streamlit
 plantuml==0.3.0
     # via text2story (pyproject.toml)
-pluggy==0.13.1
-    # via pytest
 preshed==3.0.8
     # via
     #   spacy
     #   thinc
-promise==2.3
-    # via wandb
-protobuf==3.20.3
+protobuf==3.20.0
     # via
-    #   google-api-core
-    #   googleapis-common-protos
-    #   tensorboardx
-    #   wandb
-psutil==5.9.5
-    # via wandb
-py==1.11.0
-    # via pytest
+    #   streamlit
+    #   text2story (pyproject.toml)
 py-heideltime==1.0.3
     # via text2story (pyproject.toml)
-py-rouge==1.1
-    # via allennlp-models
-py4j==0.10.9.7
-    # via pyspark
-pyarrow==9.0.0
-    # via
-    #   datasets
-    #   text2story (pyproject.toml)
-pyasn1==0.5.0
-    # via
-    #   pyasn1-modules
-    #   rsa
-pyasn1-modules==0.3.0
-    # via google-auth
+pyarrow==16.0.0
+    # via streamlit
 pydantic==1.8.2
     # via
     #   spacy
     #   thinc
-pyparsing==3.0.9
-    # via httplib2
-pysocks==1.7.1
-    # via requests
-pyspark==3.4.0
-    # via text2story (pyproject.toml)
-pytest==6.1.0
+pydeck==0.9.0
+    # via streamlit
+pympler==1.0.1
+    # via streamlit
+pyparsing==3.1.1
     # via
-    #   allennlp
-    #   text2story (pyproject.toml)
-python-crfsuite==0.9.9
-    # via sklearn-crfsuite
+    #   grandalf
+    #   httplib2
+    #   matplotlib
 python-dateutil==2.8.2
     # via
-    #   botocore
+    #   matplotlib
     #   pandas
-pytz==2023.3
+    #   streamlit
+pytorch-crf==0.7.2
+    # via text2story (pyproject.toml)
+pytz==2023.3.post1
     # via pandas
-pyyaml==6.0
+pyyaml==6.0.1
     # via
-    #   datasets
     #   huggingface-hub
     #   transformers
-    #   wandb
-regex==2023.5.5
+rectangle-packer==2.0.1
+    # via netgraph
+referencing==0.35.1
+    # via
+    #   jsonschema
+    #   jsonschema-specifications
+regex==2023.8.8
     # via
     #   nltk
-    #   sacremoses
     #   transformers
-requests[socks]==2.27.1
+requests==2.27.1
     # via
-    #   allennlp
-    #   cached-path
-    #   datasets
-    #   fsspec
-    #   gdown
-    #   google-api-core
-    #   google-cloud-storage
     #   huggingface-hub
-    #   responses
     #   spacy
-    #   text2story (pyproject.toml)
-    #   torchdata
-    #   torchtext
-    #   torchvision
+    #   streamlit
     #   transformers
-    #   wandb
-responses==0.18.0
-    # via datasets
-rsa==4.9
-    # via google-auth
-s3transfer==0.6.1
-    # via boto3
-sacremoses==0.0.53
+rpds-py==0.18.0
+    # via
+    #   jsonschema
+    #   referencing
+safetensors==0.3.3
     # via transformers
-scikit-learn==1.2.2
-    # via allennlp
-scipy==1.10.1
-    # via
-    #   allennlp
-    #   scikit-learn
-    #   text2story (pyproject.toml)
-sentencepiece==0.1.99
-    # via allennlp
-sentry-sdk==1.24.0
-    # via wandb
-setproctitle==1.3.2
-    # via wandb
-shortuuid==1.0.11
-    # via wandb
+scipy==1.11.2
+    # via netgraph
 six==1.16.0
-    # via
-    #   docker-pycreds
-    #   gdown
-    #   google-auth
-    #   promise
-    #   python-dateutil
-    #   sacremoses
-    #   sklearn-crfsuite
-    #   wandb
-sklearn-crfsuite==0.3.6
-    # via text2story (pyproject.toml)
+    # via python-dateutil
 smart-open==6.3.0
     # via pathy
-smmap==5.0.0
+smmap==5.0.1
     # via gitdb
-soupsieve==2.4.1
+soupsieve==2.5
     # via beautifulsoup4
 spacy==3.2.0
-    # via
-    #   allennlp
-    #   text2story (pyproject.toml)
+    # via text2story (pyproject.toml)
 spacy-legacy==3.0.12
     # via spacy
 spacy-loggers==1.0.4
     # via spacy
-spark-nlp==4.4.2
-    # via text2story (pyproject.toml)
 srsly==2.4.6
     # via
     #   spacy
     #   thinc
-tabulate==0.9.0
-    # via sklearn-crfsuite
-tensorboardx==2.6
-    # via allennlp
-termcolor==1.1.0
-    # via allennlp
+streamlit==1.3.1
+    # via text2story (pyproject.toml)
+sympy==1.12
+    # via torch
 thinc==8.0.17
-    # via spacy
-threadpoolctl==3.1.0
-    # via scikit-learn
-tokenizers==0.12.1
+    # via
+    #   spacy
+    #   text2story (pyproject.toml)
+tokenizers==0.13.3
     # via transformers
 toml==0.10.2
-    # via pytest
-torch==1.11.0
+    # via streamlit
+toolz==0.12.1
+    # via altair
+torch==2.0.1
     # via
-    #   allennlp
-    #   allennlp-models
-    #   fairscale
-    #   torchaudio
-    #   torchdata
-    #   torchtext
-    #   torchvision
-torchaudio==0.11.0
-    # via text2story (pyproject.toml)
-torchdata==0.3.0
-    # via text2story (pyproject.toml)
-torchtext==0.12.0
-    # via text2story (pyproject.toml)
-torchvision==0.12.0
-    # via allennlp
+    #   text2story (pyproject.toml)
+    #   triton
+tornado==6.4
+    # via streamlit
 tqdm==4.64.1
     # via
-    #   allennlp
-    #   cached-path
-    #   datasets
-    #   gdown
     #   huggingface-hub
+    #   latexcompiler
     #   nltk
-    #   sacremoses
-    #   sklearn-crfsuite
     #   spacy
-    #   torchtext
     #   transformers
-transformers==4.18.0
-    # via allennlp
+transformers==4.33.2
+    # via text2story (pyproject.toml)
+triton==2.0.0
+    # via torch
 typer==0.4.2
     # via
-    #   allennlp
     #   pathy
     #   spacy
-typing-extensions==4.6.1
+typing-extensions==4.5.0
     # via
     #   huggingface-hub
     #   pydantic
     #   torch
-    #   torchvision
+tzlocal==5.2
+    # via streamlit
 urllib3==1.26.16
-    # via
-    #   botocore
-    #   requests
-    #   responses
-    #   sentry-sdk
-    #   torchdata
-wandb==0.12.21
-    # via allennlp
+    # via requests
+validators==0.28.1
+    # via streamlit
 wasabi==0.10.1
     # via
     #   spacy
     #   thinc
-wcwidth==0.2.6
-    # via ftfy
-word2number==1.1
-    # via allennlp-models
-xxhash==3.2.0
-    # via datasets
-yarl==1.9.2
-    # via aiohttp
+watchdog==4.0.0
+    # via streamlit
+wheel==0.41.2
+    # via
+    #   nvidia-cublas-cu11
+    #   nvidia-cuda-cupti-cu11
+    #   nvidia-cuda-runtime-cu11
+    #   nvidia-curand-cu11
+    #   nvidia-cusparse-cu11
+    #   nvidia-nvtx-cu11
+zipp==3.15.0
+    # via
+    #   importlib-metadata
+    #   importlib-resources
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

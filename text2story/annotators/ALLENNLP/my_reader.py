@@ -12,13 +12,19 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer
 
 #from text2story.annotators.CUSTOMPT.srl_bert_pt.PropBankBr import PropBankBr, PropBankBrSentence
-from text2story.annotators.ALLENNLP.PropBankBr import PropBankBr, PropBankBrSentence
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+
+from ALLENNLP.PropBankBr import PropBankBr, PropBankBrSentence
 
 from allennlp_models.structured_prediction.dataset_readers import UniversalDependenciesDatasetReader
 from conllu import parse_incr
 
 #import text2story.annotators.CUSTOMPT.srl_bert_pt.preprocess
-import text2story.annotators.ALLENNLP.preprocess
+#import annotators.ALLENNLP.preprocess
+import preprocess
 import codecs
 
 # This file is heavily based on the dataset readers from allennlp_models

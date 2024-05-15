@@ -18,7 +18,7 @@ The Text2Story package is a generalization of Brat2Viz and should in fact contai
 ## 1. Getting Started
 
 The main goal of the text2story is to extract narrative from raw text. The narrative 
-components comprise events, the participants (or actors) in the events, and the time expressions. 
+components comprise events, the participants (or participants) in the events, and the time expressions. 
 
 
 
@@ -35,11 +35,7 @@ and Objectal Links.
 eventuality. For instance, there is the "agent" semantic role link, in which an event is linked to
 a participant that intentionally caused it.
 
-For more details, please read the following paper:
 
-> Silvano, P., Leal, A., Silva, F., Cantante, I., Oliveira, F., & Jorge, A. M. (2021, June). Developing a multilayer 
-semantic annotation scheme based on ISO standards for the visualization of a newswire corpus. 
-In Proceedings of the 17th Joint ACL-ISO Workshop on Interoperable Semantic Annotation (pp. 1-13)..
 
 A simple code to perform the extraction of the narrative elements, and the two type of relations
 described above is like the following.
@@ -47,22 +43,22 @@ described above is like the following.
 ```python
 import text2story as t2s # Import the package
 
-t2s.start() # Load the pipelines
+t2s.load("en") # Load the pipelines for the English language
 
 text = 'On Friday morning, Max Healthcare, which runs 10 private hospitals around Delhi, put out an "SOS" message, saying it had less than an hour\'s supply remaining at two of its sites. The shortage was later resolved.'
 
 doc = t2s.Narrative('en', text, '2020-05-30')
 
-doc.extract_actors() # Extraction done with all tools.
-doc.extract_actors('spacy', 'nltk') # Extraction done with the SPACY and NLTK tools.
-doc.extract_actors('allennlp') # Extraction done with just the ALLENNLP tool.
+doc.extract_participants() # Extraction done with all tools.
+doc.extract_participants('spacy', 'nltk') # Extraction done with the SPACY and NLTK tools.
+doc.extract_participants('allennlp') # Extraction done with just the ALLENNLP tool.
 
-doc.extract_times() # Extraction done with all tools (same as specifying 'py_heideltime', since we have just one tool to extract timexs)
+doc.extract_times() # Extraction done with all tools 
 
-doc.extract_objectal_links() # Extraction of objectal links from the text with all tools (needs to be done after extracting actors, since it requires actors to make the co-reference resolution)
+doc.extract_objectal_links() # Extraction of objectal links from the text with all tools (needs to be done after extracting participants, since it requires participants to make the co-reference resolution)
 
 doc.extract_events() # Extraction of events with all tools
-doc.extract_semantic_role_link() # Extraction of semantic role links with all tools (should be done after extracting events since most semantic relations are between an actor and an event)
+doc.extract_semantic_role_link() # Extraction of semantic role links with all tools (should be done after extracting events since most semantic relations are between an participant and an event)
 
 ann_str = doc.ISO_annotation() # Outputs ISO annotation in .ann format (txt) in a file called 'annotations.ann'
 with open('annotations.ann', "w") as fd:
@@ -79,7 +75,7 @@ with open('annotations.ann', "w") as fd:
 └──Text2Story
       └──core
       │   │   annotator.py (META-annotator)
-      │   │   entity_structures.py (ActorEntity, TimexEntity and EventEntity classes)
+      │   │   entity_structures.py (ParticipantEntity, TimexEntity and EventEntity classes)
       │   |   exceptions.py (Exceptions raised by the package)
       │   |   link_structures.py (TemporalLink, AspectualLink, SubordinationLink, SemanticRoleLink and ObjectalLink classes)
       │   |   narrative.py (Narrative class)
@@ -95,6 +91,8 @@ with open('annotations.ann', "w") as fd:
       └───annotators (tools supported by the package to do the extractions)
       |   |   NLTK
       |   │   PY_HEIDELTIME
+      |   |   BERTNERPT
+      |   |   TEI2GO (requires the manual installation for each used model)
       |   |   SPACY
       |   |   ALLENNLP
       └───experiments
@@ -118,15 +116,15 @@ with open('annotations.ann', "w") as fd:
 <a name="annotators"></a>
 ## 3. The Annotators
 All annotators have the same interface: they implement a function called 'extract_' followed by the name of the particular extraction.
-E.g., if they are extracting actors, then they implement a function named 'extract_actors', with two arguments: the language of text and the text itself.
+E.g., if they are extracting participants, then they implement a function named 'extract_participants', with two arguments: the language of text and the text itself.
 
-|  Extractions |           Interface                                      | Supporting tools        |
-|      ---     |             ---                                          |-------------------------|
-|     Actor    | extract_actors(lang, text)                               | SPACY,  NLTK , ALLENNLP |
-|    Timexs    | extract_timexs(lang, text, publication_time)             | PY_HEIDELTIME           |
-| ObjectalLink | extract_objectal_links(lang, text, publication_time)     | ALLENNLP                |
-|     Event    | extract_events(lang, text, publication_time)             | ALLENNLP                |
-| SemanticLink | extract_semantic_role_link(lang, text, publication_time) | ALLENNLP                |
+| Extractions  |           Interface                                      | Supporting tools                                                             |
+|--------------|             ---                                          |------------------------------------------------------------------------------|
+| Participant  | extract_participants(lang, text)                         | SPACY,  NLTK , ALLENNLP, BERTNERPT                                           |
+| Timexs       | extract_timexs(lang, text, publication_time)             | PY_HEIDELTIME, TEI2GO (requires the manual installation for each used model) |
+| ObjectalLink | extract_objectal_links(lang, text, publication_time)     | ALLENNLP                                                                     |
+| Event        | extract_events(lang, text, publication_time)             | ALLENNLP                                                                     |
+| SemanticLink | extract_semantic_role_link(lang, text, publication_time) | ALLENNLP                                                                     |
 
 To **change some model used in the supported tools**, just go to text2story/annotators/ANNOTATOR_TO_BE_CHANGED and change the model in the file: \_\_init\_\_.py.
 
@@ -136,6 +134,13 @@ The function load() should load the pipeline to some variable defined by you, so
 
 In the text2story.annotators.\_\_init\_\_.py file, add a call to the load() function, and to the extract functions.
 (See the already implemented tools for guidance.)
+
+Specifically, for annotators like TEI2GO (detailed in its documentation [here](https://github.com/hmosousa/tei2go#-huggingface-hub)), users need to manually install 
+the required model. For example, if you plan to use the English model, execute the following command before loading it into 'text2story':
+
+```
+pip install https://huggingface.co/hugosousa/en_tei2go/resolve/main/en_tei2go-any-py3-none-any.whl
+```
 
 And it should be done.
 
@@ -178,11 +183,18 @@ in this [link](https://graphviz.org/download/#windows). Next, install the latex-
 which you download [here](https://github.com/oschwartz10612/poppler-windows).
 
 Finnally, you can install text2story using pip. If it did not recognize the graphviz installation, then you can 
-use the following command.
+use the following command for pip (tested in pip == 21.1.1).
 
 ```
 pip install text2story  --global-option=build_ext --global-option="-IC:\Program Files\Graphviz\include" --global-option="-LC:\Program Files\Graphviz\lib\"
 ```
+
+For newer version of pip (tested in pip == 23.1.2), you can type the following command:
+
+```
+pip install --use-pep517  --config-setting="--global-option=build_ext"  --config-setting="--global-option=-IC:\Program Files\Graphviz\include" --config-setting="--global-option=-LC:\Program Files\Graphviz\lib"
+```
+
 
 <a name="webapp"></a>
 ## Web App
