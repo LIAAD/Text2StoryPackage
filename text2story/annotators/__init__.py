@@ -1,11 +1,13 @@
+import importlib
 import sys
 import os
 from pathlib import Path
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from text2story.core.exceptions import InvalidTool
-
+from text2story.core.exceptions import InvalidNarrativeComponent, DuplicateNarrativeComponent, InvalidTool
+from typing import List
+from types import ModuleType
 
 from collections import ChainMap
 
@@ -17,10 +19,54 @@ EVENT_EXTRACTION_TOOLS = {'allennlp':['en'],"srl":["pt"]}
 OBJECTAL_LINKS_RESOLUTION_TOOLS = {'allennlp':['en']}
 SEMANTIC_ROLE_LABELLING_TOOLS = {'allennlp':['en'],"srl":["pt"]}
 
+LOCAL_ANNOTATORS = set()
+
 def get_tools():
     return dict(ChainMap(PARTICIPANT_EXTRACTION_TOOLS, TIME_EXTRACTION_TOOLS, \
              EVENT_EXTRACTION_TOOLS, OBJECTAL_LINKS_RESOLUTION_TOOLS, \
                          SEMANTIC_ROLE_LABELLING_TOOLS))
+
+def get_tool_list(tool_type:str):
+    """
+
+    @param tool_type: given a type of a tool , i.e, one of the following items ['participant','time', 'event','objectal_links',
+                     'semantic_links']
+    @return: the dictionary of tools names or None if it is not found
+    """
+
+    if tool_type == 'participant':
+        return PARTICIPANT_EXTRACTION_TOOLS
+    elif tool_type == 'event':
+        return EVENT_EXTRACTION_TOOLS
+    elif tool_type == 'time':
+        return TIME_EXTRACTION_TOOLS
+    elif tool_type == 'objectal_links':
+        return OBJECTAL_LINKS_RESOLUTION_TOOLS
+    elif tool_type == 'semantic_links':
+        return  SEMANTIC_ROLE_LABELLING_TOOLS
+    else:
+        raise InvalidNarrativeComponent(tool_type)
+def add_tool(tool_name:str, lang_lst:List[str], tool_types:List[str]):
+    """
+    It adds a tool to the gallery of annotators.
+
+    @param tool: the name of the module where is your annotator
+    @param lang_lst: a list of languages supported by your custom annotator,
+                        for instance, ['en','fr']
+    @param tool_types: a list of types that your annotator labels. The
+                     supported types are ['participant','time', 'event','objectal_links',
+                     'semantic_links']
+    @return: None
+    """
+
+    LOCAL_ANNOTATORS.add(tool_name)
+
+    for ttype in tool_types:
+        tool_list = get_tool_list(ttype)
+        if tool_name not in tool_list:
+            tool_list[tool_name] = lang_lst
+        else:
+            raise DuplicateNarrativeComponent(tool_name)
 
 def load(lang, tools=None):
     """
@@ -36,6 +82,12 @@ def load(lang, tools=None):
     available_tools = get_tools()
     if tools is None:
         tools = available_tools
+
+    # loading the local annotators
+    for tl in tools:
+        if tl in LOCAL_ANNOTATORS and lang in tools[tl]:
+            local_annotator = importlib.import_module(tl)
+            local_annotator.load(lang)
 
     # the importing of libraries is made upon use
     # the user, thus, has to check the installation
@@ -85,6 +137,10 @@ def get_srlink_tools():
 
 def extract_participants(tool, lang, text, url=None):
 
+    if tool in LOCAL_ANNOTATORS:
+        local_annotator = importlib.import_module(tool)
+        return local_annotator.extract_participants(lang, text)
+
     if tool == 'spacy':
         from text2story.annotators import SPACY
         return SPACY.extract_participants(lang, text)
@@ -108,6 +164,11 @@ def extract_participants(tool, lang, text, url=None):
 
 
 def extract_times(tool, lang, text, publication_time):
+
+    if tool in LOCAL_ANNOTATORS:
+        local_annotator = importlib.import_module(tool)
+        return local_annotator.extract_times(lang, text)
+
     if tool == 'py_heideltime':
         from text2story.annotators import PY_HEIDELTIME
         return PY_HEIDELTIME.extract_times(lang, text, publication_time)
@@ -119,6 +180,11 @@ def extract_times(tool, lang, text, publication_time):
 
 
 def extract_objectal_links(tool, lang, text):
+
+    if tool in LOCAL_ANNOTATORS:
+        local_annotator = importlib.import_module(tool)
+        return local_annotator.extract_objectal_links(lang, text)
+
     if tool == 'allennlp':
         from text2story.annotators import ALLENNLP
         olink_lst =  ALLENNLP.extract_objectal_links(lang, text)
@@ -126,8 +192,12 @@ def extract_objectal_links(tool, lang, text):
 
     raise InvalidTool
 
-
 def extract_events(tool, lang, text):
+
+    if tool in LOCAL_ANNOTATORS:
+        local_annotator = importlib.import_module(tool)
+        return local_annotator.extract_events(lang, text)
+
     if tool == 'allennlp':
         from text2story.annotators import ALLENNLP
         return ALLENNLP.extract_events(lang, text)
@@ -142,6 +212,11 @@ def extract_events(tool, lang, text):
 
 
 def extract_semantic_role_links(tool, lang, text):
+
+    if tool in LOCAL_ANNOTATORS:
+        local_annotator = importlib.import_module(tool)
+        return local_annotator.extract_semantic_role_links(lang, text)
+
     if tool == 'allennlp':
         from text2story.annotators import ALLENNLP
         return ALLENNLP.extract_semantic_role_links(lang, text)

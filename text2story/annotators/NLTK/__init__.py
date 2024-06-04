@@ -22,7 +22,7 @@ def load(lang):
         nltk.download("words")
 
 
-def extract_actors(lang, text):
+def extract_participants(lang, text):
     """
     Parameters
     ----------

@@ -79,16 +79,16 @@ def start_inside_angle(bubble_idx, nbubbles):
 
     bubble_angle = angle_lst[bubble_idx]
 
-    if bubble_angle > 0 and bubble_angle <= 90:
+    if bubble_angle > -45 and bubble_angle < 45:
         return 0
-    elif bubble_angle > -90 and bubble_angle <= 0:
+    elif bubble_angle > - 135 and bubble_angle <= -45:
         return -90
-    elif bubble_angle > -180 and bubble_angle <= -90:
+    elif bubble_angle > -280 and bubble_angle <= -135:
         return -180
     else:
         return -270
 
-def draw_big_bubble(big_bubble, type_event,  angle, map_id2nodes):
+def draw_big_bubble(big_bubble, type_event,  angle, map_id2nodes, has_agent):
 
     sent_id = big_bubble.bubble_.event.sent_id
 
@@ -107,7 +107,7 @@ def draw_big_bubble(big_bubble, type_event,  angle, map_id2nodes):
     tikz_str += "\\node[report] (%s) at (A.%d) {\\footnotesize %s:%s};\n" % (name_node, angle, sent_id_text, event_text)
     tikz_str += "\n" 
 
-    if big_bubble.bubble_.agent.span != []:
+    if has_agent and big_bubble.bubble_.agent.span != []:
         # draw agents
         shift = 0.5
         current_agent = big_bubble.bubble_.agent
@@ -249,14 +249,15 @@ def draw_bubble_relation(bubble1, rel, map_id2nodes, inside_angle_map, nevents =
 
         inside_angle = inside_angle_map[name_bubble2]
 
-        if rel.out: # arg1: bubble2 arg2: bubble1
-            rel_str = rel_str + "\n \\draw [<-, dashed, arrows = {-Latex[length=5mm, width=2mm]}] " 
-        else:
-            rel_str = rel_str + "\n \\draw [->, dashed, arrows = {-Latex[length=5mm, width=2mm]}] "
+        rel_str = rel_str + "\n \\draw [->, dashed, arrows = {-Latex[length=5mm, width=2mm]}] "
+
 
         if isinstance(bubble1, BigBubble):
             inside_angle1 = 0
             rel_str = rel_str + "(%s.center)" % name_bubble1
+            rel_str = rel_str + " edge [out=%d,in=%d] node[midway, fill=white, sloped] {\\footnotesize %s} (%s);" % (
+            inside_angle1, inside_angle, name_edge, name_bubble2)
+
         else:
             # TODO: testar com inside angle com o bubble1
             if name_bubble1 not in inside_angle_map:
@@ -265,19 +266,20 @@ def draw_bubble_relation(bubble1, rel, map_id2nodes, inside_angle_map, nevents =
                 inside_angle_map[name_bubble1] = start_inside_angle(bubble_idx1, nevents)
 
             inside_angle1 = inside_angle_map[name_bubble1]
-            inside_angle_map[name_bubble1] -= 60 
-            rel_str = rel_str + "(%s)" % name_bubble1
+            #inside_angle_map[name_bubble1] -= 60
+            #rel_str = rel_str + "(%s)" % name_bubble1
+            if rel.out:
+                rel_str = rel_str + " (%s) edge [out=%d,in=%d] node[midway, fill=white, sloped] {\\footnotesize %s} (%s);" % \
+                          (name_bubble2, inside_angle1, inside_angle,name_edge,  name_bubble1)
+            else:
+                rel_str = rel_str + " (%s) edge [out=%d,in=%d] node[midway, fill=white, sloped] {\\footnotesize %s} (%s);" % \
+                          (name_bubble1, inside_angle1, inside_angle, name_edge, name_bubble2)
 
-
-        rel_str = rel_str + " edge [out=%d,in=%d] node[midway, fill=white, sloped] {\\footnotesize %s} (%s);" % (inside_angle1, inside_angle,name_edge,  name_bubble2)
-
-        inside_angle_map[name_bubble2] -= 60
+        #inside_angle_map[name_bubble2] -= 60
                
     else:
-        if rel.out: # arg1:bubble2 arg2:bubble1:
-            rel_str = rel_str + "\n \\draw [<-, very thick, arrows = {-Latex[length=5mm, width=2mm]}] "
-        else:
-            rel_str = rel_str + "\n \\draw [->, very thick, arrows = {-Latex[length=5mm, width=2mm]}] "
+
+        rel_str = rel_str + "\n \\draw [->, very thick, arrows = {-Latex[length=5mm, width=2mm]}] "
 
         isbubble = re.match("r\d+", name_bubble1)
         if isbubble:
@@ -300,7 +302,11 @@ def draw_bubble_relation(bubble1, rel, map_id2nodes, inside_angle_map, nevents =
                     inside_angle_map[name_bubble2] -= 60    
 
                 else:
-                    rel_str = rel_str + "(%s) -- (%s) node[midway,fill=white,sloped] {\\footnotesize %s};" % (name_bubble1, name_bubble2, name_edge)
+                    if rel.out:
+                        rel_str = rel_str + "(%s) -- (%s) node[midway,fill=white,sloped] {\\footnotesize %s};" % (
+                        name_bubble2, name_bubble1, name_edge)
+                    else:
+                        rel_str = rel_str + "(%s) -- (%s) node[midway,fill=white,sloped] {\\footnotesize %s};" % (name_bubble1, name_bubble2, name_edge)
             else:
                 rel_str = rel_str + "(%s) -- (%s) node[midway,fill=white,sloped] {\\footnotesize %s};" % (name_bubble1, name_bubble2, name_edge)
         else:
@@ -311,7 +317,10 @@ def draw_bubble_relation(bubble1, rel, map_id2nodes, inside_angle_map, nevents =
     return rel_str
 
 
-def build_fig(tok_lst, type_event = "Reporting", type_rel_lst = []):
+def build_fig(tok_lst, **kwargs):
+    type_event = kwargs["type_event"]
+    type_rel_lst = kwargs["type_rel_lst"]
+    has_agent = kwargs["has_agent"]
 
     tikz_str = tikz_doc + "\n" + bubble_header()
     
@@ -326,7 +335,7 @@ def build_fig(tok_lst, type_event = "Reporting", type_rel_lst = []):
     for idx, sent_id in enumerate(bubble_map.map.keys()):
 
         big_bubble = bubble_map.map[sent_id]
-        tikz_str = tikz_str + "\n" + draw_big_bubble(big_bubble, type_event, angle_lst[idx], map_id2nodes)    
+        tikz_str = tikz_str + "\n" + draw_big_bubble(big_bubble, type_event, angle_lst[idx], map_id2nodes,has_agent)
 
         tikz_str = tikz_str + "\n" + draw_little_bubbles(big_bubble, map_id2nodes)
 
@@ -348,8 +357,9 @@ def build_fig(tok_lst, type_event = "Reporting", type_rel_lst = []):
             continue
 
         nevents = len(big_bubble.little_bubbles)
+
         # draw agent relations
-        if big_bubble.bubble_.agent.span != []:
+        if has_agent and big_bubble.bubble_.agent.span != []:
             current_agent = big_bubble.bubble_.agent
 
             while (current_agent != None):
@@ -371,25 +381,25 @@ def build_fig(tok_lst, type_event = "Reporting", type_rel_lst = []):
             
             tikz_str = tikz_str + "\n"
     
-            # draw relations of the little bubbles
-            for little_bubble in big_bubble.little_bubbles:
+         # draw relations of the little bubbles
+        for little_bubble in big_bubble.little_bubbles:
 
-                lbubble_event_id = little_bubble.event.id_ann[0]
-                #print("==>",lbubble_event_id)
-                #import pdb
-                #pdb.set_trace()
+            lbubble_event_id = little_bubble.event.id_ann[0]
 
-                if lbubble_event_id not in map_id2nodes:
-                     continue
+            if lbubble_event_id not in map_id2nodes:
+                continue
 
-                # is it in the same big bubble? adjust the angle inside
-                for rel in little_bubble.relations:
-                    #if rel.edge_type.startswith("TLINK") and rel.edge_type != "TLINK_identity":
-                    if rel.edge_type.startswith("TLINK"):
-                        continue
-                    rel_str = draw_bubble_relation(little_bubble, rel, map_id2nodes, inside_angle_map, nevents)  
-                    if rel_str is not None:
-                         tikz_str += rel_str
+            # is it in the same big bubble? adjust the angle inside
+            for rel in little_bubble.relations:
+                #print("-->", rel.bubble_pointer.event.id_ann)
+                #if rel.edge_type.startswith("TLINK") and rel.edge_type != "TLINK_identity":
+                #if rel.edge_type.startswith("TLINK"):
+                #    continue
+                rel_str = draw_bubble_relation(little_bubble, rel, map_id2nodes, inside_angle_map, nevents)
+                if rel_str is not None:
+                    tikz_str += rel_str
+
+            print()
 
                 
 
@@ -397,13 +407,14 @@ def build_fig(tok_lst, type_event = "Reporting", type_rel_lst = []):
 
     return tikz_str, bubble_map
 
-def build_fig_ann(ann_file, output_dir):
+def build_fig_ann(ann_file, output_dir,**kwargs):
 
-    reader = ReadBrat()
+    lang = kwargs["lang"]
+    reader = ReadBrat(lang)
     data = reader.process_file(ann_file)
 
     #Serao apenas as relações temporais que nao envolvam reporting events ligado pelo TLINK identity.
-    tikz_str, bubble_map = build_fig(data, "Reporting", ["TLINK"])
+    tikz_str, bubble_map = build_fig(data, **kwargs)
 
     bubble_map.to_json(os.path.join(output_dir,"output.txt"))
 

@@ -20,6 +20,7 @@ class TokenCorpus:
         self.gov_verb_idx = None
         self.srl = None
         self.sent_id = None
+        self.clause_id = None
 
         self.offset = None
         self.attr = []
@@ -30,7 +31,19 @@ class TokenCorpus:
         self.id_ann = []
 
         # a list of items of type TokenRelation
-        self.relations = [] 
+        self.relations = []
+
+    def get_attr_value(self,attr_name, token_type=None):
+        for (type_, attr_map) in self.attr:
+            if token_type != None and type_ == token_type:
+                return attr_map.get(attr_name)
+            else:
+                return attr_map.get(attr_name)
+    def is_type(self, token_type):
+        for (type_, _) in self.attr:
+            if type_ == token_type:
+                return True
+        return False
 
 class TokenRelation:
     """
