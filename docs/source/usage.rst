@@ -13,13 +13,13 @@ The Narrative Object
 -----
 
 The narrative object contains all the properties and functions for a narrative extraction
-process. So, to use text2story, the first step is to import the library and create a object
+process. So, to use text2story, the first step is to import the library and create an object
 of this kind. To create such an object, the required arguments are the language code (i.e., 'en'
 for English, 'pt' for Portuguese, and so on.), the text of the narrative (the length of the input is restricted
-to the models applied in the pipeline), and the document creation date. The last one is specially important for news
-stories who usually present a publication date.
+to the models applied in the pipeline), and the document creation date. The last one is especially important for news
+stories which usually present a publication date.
 
-The code bellow present an example with a raw text English that is used to create a Narrative object.
+The code bellow presents an example with a raw text English that is used to create a Narrative object.
 
 .. code-block:: python
     import text2story as t2s
@@ -115,11 +115,11 @@ Bellow, an example of using only NLTK to extract participants from a narrative.
 
     print(my_narrative.participants)
 
-The ALLENNLP ('en') and SRL('pt') modules employ Semantic Role Labeling modules to identify participants, and the
-code for them is same as above, only changing the name of the module.
+The ALLENNLP ('en') and SRL('pt') modules employ Semantic Role Labeling modules to identify participants and the
+code for them is the same as above, only changing the name of the module.
 
-It is also possible to pipeline models to obtain a better or a different result. The code bellow extract
-participants from a narrative text in Portuguese using SPACY and SRL module.
+It is also possible to use pipeline models to obtain better or different results. The code below extracts
+participants from a narrative text in Portuguese using SPACY and SRL modules.
 
 .. code-block:: python
     import text2story as t2s
@@ -151,7 +151,7 @@ Events
 ''''''''
 
 There are only two modules devoted to the extraction of events, ALLENNLP ('en') and SRL ('pt'). The extraction of
-events is done in the same way as extraction of time and participants. See the code bellow.
+events is done in the same way as the extraction of time and participants. See the code below.
 
 .. code-block:: python
     import text2story as t2s
@@ -164,7 +164,7 @@ events is done in the same way as extraction of time and participants. See the c
 Semantic Links
 ''''''''
 
-Semantic links can only be extracted after the extraction of events, participants and time. So, the code bellow
+Semantic links can only be extracted after the extraction of events, participants, and time. So, the code below
 updates the example code from the extraction of events.
 
 .. code-block:: python
@@ -182,22 +182,22 @@ updates the example code from the extraction of events.
 Custom Annotators
 ^^^^^^^^^^^^^^^^^
 
-A custom annotator should follow the structure of an standard annotator, i.e., it should contains at least the
-load function. This method main's goal is to load the models used in its pipeline. For instance, consider the
-following implementation of a custom annotator that uses tei2go french model to extract time expressions, and
-spacy NER french model to extract participants.
+A custom annotator should follow the structure of a standard annotator, i.e., it should contain at least the
+load function. The main goal of this method is to load the models used in its pipeline. For instance, consider the
+following implementation of a custom annotator that uses tei2go French model to extract time expressions, and
+the spacy NER French model to extract participants.
 
 .. literalinclude:: custom_annotator.py
   :language: python
 
-To use your new annotator, first you need to add it to the text2story pipeline using the following code.
+To use your new annotator, first, you need to add it to the text2story pipeline using the following code.
 
 .. code-block:: python
     import text2story as t2s
 
     t2s.add_annotator("custom_annotator", ['fr'], ['participant', 'time'])
 
-Then, you can use the annotator like the native ones. See the code bellow.
+Then, you can use the annotator like the native ones. See the code below.
 
 .. code-block:: python
     import text2story as t2s
