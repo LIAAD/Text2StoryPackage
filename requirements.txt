@@ -19,7 +19,7 @@ base58==2.1.1
     # via streamlit
 beautifulsoup4==4.12.2
     # via text2story (pyproject.toml)
-blinker==1.8.1
+blinker==1.8.2
     # via streamlit
 blis==0.7.9
     # via
@@ -106,7 +106,7 @@ lit==16.0.6
     # via triton
 markupsafe==2.1.2
     # via jinja2
-matplotlib==3.8.0
+matplotlib==3.7.0
     # via
     #   netgraph
     #   text2story (pyproject.toml)
@@ -198,13 +198,13 @@ protobuf==3.20.0
     #   text2story (pyproject.toml)
 py-heideltime==1.0.3
     # via text2story (pyproject.toml)
-pyarrow==16.0.0
+pyarrow==16.1.0
     # via streamlit
 pydantic==1.8.2
     # via
     #   spacy
     #   thinc
-pydeck==0.9.0
+pydeck==0.9.1
     # via streamlit
 pympler==1.0.1
     # via streamlit
@@ -242,7 +242,7 @@ requests==2.27.1
     #   spacy
     #   streamlit
     #   transformers
-rpds-py==0.18.0
+rpds-py==0.18.1
     # via
     #   jsonschema
     #   referencing
@@ -312,13 +312,13 @@ tzlocal==5.2
     # via streamlit
 urllib3==1.26.16
     # via requests
-validators==0.28.1
+validators==0.28.3
     # via streamlit
 wasabi==0.10.1
     # via
     #   spacy
     #   thinc
-watchdog==4.0.0
+watchdog==4.0.1
     # via streamlit
 wheel==0.41.2
     # via
