@@ -21,11 +21,9 @@ stories who usually present a publication date.
 
 The code bellow present an example with a raw text English that is used to create a Narrative object.
 
-.. code-block:: python
-    import text2story as t2s
+.. literalinclude:: examples/narrative_object.py
+  :language: python
 
-    text = 'The king died in battle. The queen married his brother.'
-    my_narrative = t2s.Narrative('en', text, '2024')
 
 The narrative object is used then to process all the pipeline of annotators that will extract the narrative components.
 The Section Annotators Module details how to build such pipeline.
@@ -44,15 +42,8 @@ annotations, if they exists. This is also a class defined in readers module.
 
 Next, a code example to read a directory with annotations in BRAT format.
 
-.. code-block:: python
-    from text2story.readers.read_brat import ReadBrat
-    reader = ReadBrat()
-
-    doc_lst = reader.process("data/")
-    for doc in doc_lst:
-        # each doc is a TokenCorpus list
-        for tok in doc:
-            print(tok.text)
+.. literalinclude:: examples/read_brat_dir
+  :language: python
 
 
 The next code illustrate how to use `ReadBrat` to read only one file.
