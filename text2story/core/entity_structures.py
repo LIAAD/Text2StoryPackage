@@ -1,41 +1,42 @@
 """
 	text2story.core.entity_structures
 
-	Entity structures classes (Actor, TimeX and Event)
+	Entity structures classes (participant, TimeX and Event)
 """
+import sys
 
 
-class ActorEntity:
+class ParticipantEntity:
     """
-    Representation of an actor entity.
+    Representation of an Participant entity.
 
     Attributes
     ----------
     text: str
-        The textual representation of the actor.
+        The textual representation of the participant.
     character_span: tuple[int, int]
-        The character span of the actor.
+        The character span of the participant.
     lexical_head: str
-        The lexical head of the actor.
+        The lexical head of the participant.
         Possible values are: 'Noun' or 'Pronoun'.
     type: str
-        The type of the actor.
+        The type of the participant.
         Possible values are: 'Per', 'Org', 'Loc', 'Obj', 'Nat' or 'Other'.
     individuation: str
-        Stipulation of whether the actor is a set, a single individual, or a mass quantity.
+        Stipulation of whether the participant is a set, a single individual, or a mass quantity.
         Possible values are: 'Set', 'Individual' or 'Mass'.
-        NOTE: For now, using the label 'Individual' to all actors.
+        NOTE: For now, using the label 'Individual' to all participants.
     involvement: str
         The specification of how many entities or how much of the domain are/is participating in an event.
         Possible values are: '0', '1', '>1', 'All' or 'Und'.
-        NOTE: For now, using the label '1' to all actors.
+        NOTE: For now, using the label '1' to all participants.
     """
 
-    def __init__(self, text, character_span, lexical_head, actor_type):
+    def __init__(self, text, character_span, lexical_head, participant_type):
         self.text = text
         self.character_span = character_span
         self.lexical_head = lexical_head
-        self.type = actor_type
+        self.type = participant_type
         self.individuation = 'Individual'
         self.involvement = '1'
 
@@ -79,10 +80,20 @@ class EventEntity:
         self.character_span = character_span
 
         for attr_name, attr_value in kwargs.items():
-            setattr(self,attr_name, attr_value)
+            if attr_name.lower() == "event_class":
+                setattr(self, "Class", attr_value)
+            elif attr_name.lower() == "event_type":
+                setattr(self, "Event_Type", attr_value)
+            else:
+                setattr(self,attr_name, attr_value)
 
-        self.factuality = "Factual"
-        self.tense = "Pres"
+        if hasattr(self, "Event_Type"):
+            event_type = self.__getattribute__("Event_Type")
+            # deafult value for event_type
+            setattr(self, "Event_Type","Process")
+
+        #self.factuality = "Factual"
+        #self.tense = "Pres"
 
 class SpatialRelationEntity:
     def __init__(self, text, character_span,**kwargs):

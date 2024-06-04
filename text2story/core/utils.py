@@ -9,9 +9,14 @@
 """
 
 from itertools import tee
+import subprocess
+import sys
+
+import os
 
 import warnings
 
+import importlib_metadata
 import numpy as np
 from typing import Tuple, List
 
@@ -48,7 +53,8 @@ def bsearch_tuplelist(x: int, xs: List[Tuple[int, int]]) -> int:
 
 
 def join_tokens(tok_lst):
-    pronomes = ["me", "te", "lhe", "o", "a", "la", "lo", "lho", "lha", "nos"]
+
+    special_suffix = ["se","me", "te", "lhe", "o", "a", "la", "lo", "lho", "lha", "nos","feira"]
     parentheses = ["(", "{"]
     punctuation = [",", ".", ":", ";", "?", "!", ")", "}"]
 
@@ -64,7 +70,7 @@ def join_tokens(tok_lst):
             while i < len(tok_lst):
                 if i in indices:
                     if i + 1 < len(tok_lst) and \
-                            tok_lst[i + 1].lower() in pronomes:
+                            tok_lst[i + 1].lower() in special_suffix:
                         tok_join = tok_join.strip() + tok_lst[i]
                         i = i + 1
 
@@ -218,4 +224,138 @@ def diff_ann(doc1, doc2):
                     ann2[id] = tok.text
 
 
+def normalize_tag(label):
+    """
+    Parameters
+    ----------
+    label : str
 
+    Returns
+    -------
+    str
+        the label normalized
+    """
+
+    mapping = {
+        # POS tags
+        # Universal POS Tags
+        # http://universaldependencies.org/u/pos/
+
+        # "ADJ": "adjective",
+        # "ADP": "adposition",
+        # "ADV": "adverb",
+        # "AUX": "auxiliary",
+        # "CONJ": "conjunction",
+        # "CCONJ": "coordinating conjunction",
+        # "DET": "determiner",
+        # "INTJ": "interjection",
+        "NOUN": "Noun",
+        # "NUM": "numeral",
+        # "PART": "particle",
+        "PRON": "Pronoun",
+        "PROPN": "Noun",
+        "NPROP":"Noun",
+        # "PUNCT": "punctuation",
+        # "SCONJ": "subordinating conjunction",
+        # "SYM": "symbol",
+        # "VERB": "verb",
+        # "X": "other",
+        # "EOL": "end of line",
+        # "SPACE": "space",
+
+        # NE
+        # en
+        'CARDINAL': 'Other',  # 'Numerals that do not fall under another type'
+        'DATE': 'Date',  # 'Absolute or relative dates or periods'
+        'EVENT': 'Other',  # 'Named hurricanes, battles, wars, sports events, etc.'
+        'FAC': 'Loc',  # 'Buildings, airports, highways, bridges, etc.'
+        'GPE': 'Loc',  # 'Countries, cities, states'
+        'LANGUAGE': 'Other',  # 'Any named language'
+        'LAW': 'Other',  # 'Named documents made into laws.'
+        'LOC': 'Loc',  # 'Non-GPE locations, mountain ranges, bodies of water'
+        'MONEY': 'Other',  # 'Monetary values, including unit'
+        'NORP': 'Other',  # 'Nationalities or religious or political groups'
+        'ORDINAL': 'Other',  # '"first", "second", etc.'
+        'ORG': 'Org',  # 'Companies, agencies, institutions, etc.'
+        'PERCENT': 'Other',  # 'Percentage, including "%"'
+        'PERSON': 'Per',  # 'People, including fictional'
+        'PRODUCT': 'Obj',  # 'Objects, vehicles, foods, etc. (not services)'
+        'QUANTITY': 'Other',  # 'Measurements, as of weight or distance'
+        'TIME': 'Time',  # 'Times smaller than a day'
+        'WORK_OF_ART': 'Other',  # 'Titles of books, songs, etc.'
+
+        # pt
+        # 'LOC'
+        'MISC': 'Other',  # 'Miscellaneous entities, e.g. events, nationalities, products or works of art'
+        # 'ORG'
+        'PER': 'Per'  # 'People, including fictional'
+    }
+
+    return mapping.get(label, 'UNDEF')
+
+
+def install(pkg,path):
+    return subprocess.check_call([sys.executable, "-m", "pip", "install", pkg,"--target={}".format(path)])
+
+
+def is_library_installed(library_name, target_directory):
+    try:
+        installed_distributions = importlib_metadata.distributions(path=[target_directory])
+
+        for distribution in installed_distributions:
+            if distribution.metadata['Name'] == library_name:
+                return True
+
+        return False
+    except Exception:
+        return False
+
+def fast_scandir(dirname):
+    subfolders= [f.path for f in os.scandir(dirname) if f.is_dir()]
+    for dirname in list(subfolders):
+        subfolders.extend(fast_scandir(dirname))
+    return subfolders
+
+def find_target_dir(pathname, target):
+    subfolders = fast_scandir(pathname)
+    for p in subfolders:
+        if p.endswith(target):
+            return p
+
+def map_pos2head(pos_tag):
+    p = pos_tag.lower()
+
+    map = {"noun":"Noun","propn":"Noun","pron":"Pronoun","det":"Noun"}
+    if p in map:
+        return map[p]
+    else:
+        return "None"
+
+def find_first_non_space(s, p):
+    # Check if p is out of range
+    if p < 0 or p >= len(s):
+        return -1  # Invalid position
+
+    # Start from position p and iterate until a non-space character is found
+    while p < len(s) and s[p].isspace():
+        p += 1
+
+    # Check if we reached the end of the string without finding a non-space character
+    if p >= len(s):
+        return -1  # No non-space character found
+
+    return p  # Return the position of the first non-space character
+
+def find_substring_match(matches, position):
+
+    for match in matches:
+        # Get the matched substring
+        matched_substring = match.group(0)
+
+        # Get the start and end positions of the matched substring
+        start_pos = match.start()
+        end_pos = match.end()
+
+        # Check if the matched substring is within the desired range (starting from x)
+        if start_pos >= position:
+            return start_pos

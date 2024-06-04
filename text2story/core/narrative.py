@@ -8,9 +8,11 @@ import warnings
 from text2story.core.annotator import Annotator
 from text2story.core.entity_structures import *
 from text2story.core.link_structures import *
-from text2story.core.utils import pairwise, capfirst, join_tokens
+from text2story.core.utils import pairwise, capfirst, join_tokens, find_first_non_space
 
+import re
 
+from text2story.core.utils import map_pos2head
 class Narrative:
     """
     Representation of a narrative.
@@ -23,9 +25,9 @@ class Narrative:
             the text itself
     publication_time : str
                     the publication time ('XXXX-XX-XX')
-    actors: dict{str -> Actor}
-            the actors identified in the text.
-            each key in the dict, of the form 'T' concatenated with some int, has an actor as a value.
+    participants: dict{str -> participant}
+            the participants identified in the text.
+            each key in the dict, of the form 'T' concatenated with some int, has an participant as a value.
     times: dict{str -> Time}
             the temporal expressions identified in the text.
             each key in the dict, of the form 'T' concatenated with some int, has an time as a value.
@@ -35,17 +37,17 @@ class Narrative:
 
     Methods
     -------
-    extract_actors(*tools)
-            extracts all the actors in the text using the annotators defined in 'tools', updating self.actors
+    extract_participants(*tools)
+            extracts all the participants in the text using the annotators defined in 'tools', updating self.participants
     extract_timexs(*tools)
             extracts all the timexs in the text using the annotators defined in 'tools', updating self.timexs
     extract_corefs(*tools)
             coreference resolution in the text using the tools 'tools', updating self.obj_rels
-            typically, this call increases self.actors since news entities can be identified
-    _get_actor_key(char_offset)
-            returns the key of the actor with the corresponding character offset or None if such actor wasn't identified before
-    _add_actor(char_offset)
-            update self.actors by adding the new actor with character offset 'char_offset' and returns the key given to the new actor
+            typically, this call increases self.participants since news entities can be identified
+    _get_participant_key(char_offset)
+            returns the key of the participant with the corresponding character offset or None if such participant wasn't identified before
+    _add_participant(char_offset)
+            update self.participants by adding the new participant with character offset 'char_offset' and returns the key given to the new participant
     ISO_annotation(file_name)
             outputs ISO annotation in .ann format (txt)
     """
@@ -72,14 +74,18 @@ class Narrative:
         self._event_id = 1
         self._rel_id = 1
 
-        self.actors = {}
+        self.participants = {}
         self.times = {}
         self.events = {}
         self.spatial_relations = {}
 
         self.links = {}
 
-        self.sem_role_map = {"participant":"agent","event":"cause"}
+        self.sem_role_map = {"participant":"agent","event":"cause",\
+                             "location":"location", "theme":"theme",\
+                             "path":"path","manner":"manner","cause":"cause",\
+                             "agent":"agent","goal":"goal"}
+        self.sem_role_ignore = ["time"] # semantic links to ignore, there is no mapping
         #self.obj_links = {}
         #self.sem_links = {}
 
@@ -89,10 +95,30 @@ class Narrative:
         #self.movement_links = {}
         # self.measure_links = {}
 
+    def get_relations_byargs(self, arg1, arg2):
+        """
+        Search for a relation entity whose arguments are arg1 and arg2
+        @param arg1:
+        @param arg2:
+        @return: [link_structures], a set of relations (ids) between the two entities
+        """
+        relation_lst = []
+        for relation_type in self.links:
+            for relation in self.links[relation_type]:
+                if relation.arg1 == arg1 and relation.arg2 == arg2:
+                    relation_lst.append(relation)
 
+                if relation.arg1 == arg2 and relation.arg2 == arg1:
+                    relation_lst.append(relation)
+
+        return relation_lst
+
+
+    def get_entity_byname(self, name):
+        return self.__getattribute__(name)
 
     @classmethod
-    def fromTokenCorpus(cls, lang,  doc):
+    def fromTokenCorpus(cls, lang,  doc, raw_text=None):
         """
         build a narrative object from a list of TokenCorpus objects
 
@@ -103,7 +129,7 @@ class Narrative:
         cls.lang = lang
         cls.publication_time = None
 
-        cls.actors = {}
+        cls.participants = {}
         cls.times = {}
         cls.events = {}
         cls.spatial_relations = {}
@@ -135,9 +161,13 @@ class Narrative:
                     main_type = rel_type[0]
                     subtype = rel_type[1]
                     if rel.argn == "arg2":
+                        # this could produce an error, if the token has more than one id
+                        # TODO: make a function that takes the id of arg1 for the given relation
+                        # maybe I should chek in rel.toks[0].relations with the same id , and get the argument
                         arg1 = doc[i].id_ann[0]
                         arg2 = rel.toks[0].id_ann[0]
                     else:
+                        # this could produce an error, if the token has more than one id
                         arg2 = doc[i].id_ann[0]
                         arg1 = rel.toks[0].id_ann[0]
 
@@ -162,11 +192,11 @@ class Narrative:
             span_end = doc[idx_lst[-1]].offset + len(doc[idx_lst[-1]].text)
 
             if ann_type == "Participant":
-
-                lexical_head = ann_map.get("Lexical_Head","")
+                # idx_lst[0].pos is the first pos tag option to label the lexical head of the participant
+                lexical_head = ann_map.get("Lexical_Head", map_pos2head(doc[idx_lst[0]].pos))
 
                 participant_type = ann_map.get("Participant_Type_Domain","")
-                cls.actors[id_ann] = ActorEntity(text, (span_start, span_end), lexical_head, actor_type=participant_type)
+                cls.participants[id_ann] = ParticipantEntity(text, (span_start, span_end), lexical_head, participant_type=participant_type)
             elif ann_type == "Event":
                 event_class = ann_map.get("Class", "")
                 event_polarity = ann_map.get("Polarity","Pos")
@@ -176,7 +206,7 @@ class Narrative:
                 event_aspect = ann_map.get("Aspect","Perfective")
 
                 cls.events[id_ann] = EventEntity(text, (span_start, span_end),event_class=event_class,\
-                                                 polarity=event_polarity,type=event_type,pos=event_pos,\
+                                                 polarity=event_polarity,event_type=event_type,pos=event_pos,\
                                                  tense=event_tense,aspect=event_aspect)
             elif ann_type == "Time":
                 # annotations :: [(TimeStartOffset, TimeEndOffset, TimeType, TimeValue)]
@@ -198,15 +228,18 @@ class Narrative:
 
 
 
-        narrativeSelf = cls(lang,doc_txt,"2023")
-        narrativeSelf.actors = cls.actors
+        if raw_text is None:
+            narrativeSelf = cls(lang,doc_txt,"2023")
+        else:
+            narrativeSelf = cls(lang, raw_text, "2023")
+        narrativeSelf.participants = cls.participants
         narrativeSelf.events = cls.events
         narrativeSelf.times = cls.times
         narrativeSelf.spatial_relations = cls.spatial_relations
         narrativeSelf.links = cls.links
         return narrativeSelf
 
-    def extract_actors(self, *tools):
+    def extract_participants(self, *tools, url=None):
         """
         Parameters
         ----------
@@ -215,18 +248,18 @@ class Narrative:
 
         Returns
         -------
-                self.actors updated
+                self.participants updated
         """
 
-        actors = Annotator(tools).extract_actors(self.lang,
-                                                 self.text)  # annotations :: [(EntityStartOffset, EntityEndOffset, EntityPOSTag, EntityType)]
+        participants = Annotator(tools).extract_participants(self.lang,
+                                                 self.text,url)  # annotations :: [(EntityStartOffset, EntityEndOffset, EntityPOSTag, EntityType)]
 
-        for actor in actors:
-            self.actors['T' + str(self._id)] = ActorEntity(self.text[actor[0][0]:actor[0][1]], actor[0], actor[1],
-                                                           actor[2])
+        for participant in participants:
+            self.participants['T' + str(self._id)] = ParticipantEntity(self.text[participant[0][0]:participant[0][1]], participant[0], participant[1],
+                                                           participant[2])
             self._id += 1
 
-        return self.actors
+        return self.participants
 
     def extract_times(self, *tools):
         """
@@ -265,7 +298,7 @@ class Narrative:
 
         for event in events.itertuples():
             self.events["T" + str(self._id)
-                        ] = EventEntity(event.actor, event.char_span, event_class="Occurrence",\
+                        ] = EventEntity(event.participant, event.char_span, event_class="Occurrence",\
                                         polarity="Pos", factuality="Factual",tense="Pres")
             self._id += 1
 
@@ -293,14 +326,14 @@ class Narrative:
                 e1 = cluster[i]
                 e2 = cluster[i + 1]
 
-                # Get the actors
-                arg1, arg2 = self._get_actor_key(e1), self._get_actor_key(e2)
+                # Get the participants
+                arg1, arg2 = self._get_participant_key(e1), self._get_participant_key(e2)
 
-                # If one of them wasn't identified in the actor extration, add it as a new actor
+                # If one of them wasn't identified in the participant extration, add it as a new participant
                 if arg1 == None:
-                    arg1 = self._add_actor(e1)
+                    arg1 = self._add_participant(e1)
                 if arg2 == None:
-                    arg2 = self._add_actor(e2)
+                    arg2 = self._add_participant(e2)
 
                 # (Type (sameHead, partOf, ...), Arg1, Arg2)
                 subtype = type='objIdentity'
@@ -312,12 +345,12 @@ class Narrative:
 
     def extract_semantic_role_links(self, *tools):
         """
-        Find semantic role links between extracted actors and events.
-        Since the SRL model is different from the NER model, this function maps actors found by the SRL model into
-        actors that were already extracted. If the actor was not yet extracted, it adds a new one.
+        Find semantic role links between extracted participants and events.
+        Since the SRL model is different from the NER model, this function maps participants found by the SRL model into
+        participants that were already extracted. If the participant was not yet extracted, it adds a new one.
 
-        Links actors to events by text order. If we have ACTOR1 -> EVENT1 -> ACTOR2 in the text,
-        then we make two semantic role links - EVENT1 -> ROLE -> ACTOR1 | EVENT1 -> ROLE -> ACTOR2
+        Links participants to events by text order. If we have participant1 -> EVENT1 -> participant2 in the text,
+        then we make two semantic role links - EVENT1 -> ROLE -> participant1 | EVENT1 -> ROLE -> participant2
 
         @param tools: Iterable of tools to be used
 
@@ -326,8 +359,8 @@ class Narrative:
         srl_by_sentence = Annotator(
             tools).extract_semantic_role_links(self.lang, self.text)
 
-        # FIND OUT IF ARGUMENT OF SRL HAS AN ACTOR RETRIEVED BY THE NER COMPONENT
-        # IF NOT, ADD A NEW ACTOR CORRESPONDING TO THE ARGUMENT
+        # FIND OUT IF ARGUMENT OF SRL HAS AN participant RETRIEVED BY THE NER COMPONENT
+        # IF NOT, ADD A NEW participant CORRESPONDING TO THE ARGUMENT
         for sentence_df in srl_by_sentence:
 
             key_list = []
@@ -346,18 +379,18 @@ class Narrative:
                             event_key = self._add_event(row.char_span)
                             key_list.append(event_key)
                     continue
-                actor_key = self._get_actor_key(
+                participant_key = self._get_participant_key(
                     row.char_span, match_type="partial")
 
-                if actor_key is not None:
-                    key_list.append(actor_key)
+                if participant_key is not None:
+                    key_list.append(participant_key)
                 else:
-                    if actor_key is None and event_key is None:
+                    if participant_key is None and event_key is None:
                         key_list.append("None")
                 #else:
-                #    actor_key = self._add_actor(
-                #        row.char_span, lexical_head="Noun", actor_type="Other")
-                #    key_list.append(actor_key)
+                #    participant_key = self._add_participant(
+                #        row.char_span, lexical_head="Noun", participant_type="Other")
+                #    key_list.append(participant_key)
             
             sentence_df["key"] = key_list
 
@@ -370,48 +403,48 @@ class Narrative:
 
                 if (sem1 == "EVENT") | (sem2 == "EVENT"):
                     if sem1 != "EVENT":
-                        sem_role, actor, event = sem1, row1.key, row2.key
+                        sem_role, participant, event = sem1, row1.key, row2.key
                     else:
-                        sem_role, actor, event = sem2, row2.key, row1.key
+                        sem_role, participant, event = sem2, row2.key, row1.key
 
-                    if actor == "None" or event == "None":
+                    if participant == "None" or event == "None":
                         continue
-
-                    sem_links.append(SemanticRoleLink(
-                        actor, event, self.sem_role_map[sem_role.lower()], "R" + str(self._rel_id)))
-                    self._rel_id += 1
+                    if sem_role not in self.sem_role_ignore:
+                        sem_links.append(SemanticRoleLink(
+                            participant, event, self.sem_role_map[sem_role.lower()], "R" + str(self._rel_id)))
+                        self._rel_id += 1
 
         self.links["SRLINK"] =sem_links
         return sem_links
 
-    def _add_srlink(self, actor, event, sem_role):
+    def _add_srlink(self, participant, event, sem_role):
         self.links["SRLINKS"]["R" + str(self._rel_id)
-                       ] = SemanticRoleLink(actor, event, self.sem_role_map[sem_role.lower()], "R" + str(self._rel_id))
+                       ] = SemanticRoleLink(participant, event, self.sem_role_map[sem_role.lower()], "R" + str(self._rel_id))
         self._rel_id += 1
 
-    def _get_actor_key(self, char_span, match_type="exact"):
+    def _get_participant_key(self, char_span, match_type="exact"):
         """
         Parameters
         ----------
         char_span : (int, int)
-                the actor character offset of the actor to find the key
+                the participant character offset of the participant to find the key
         match_type: str
                 type of match for the character span.
-                If exact, the span must be exactly the same to match an actor.
-                If partial, the span must be partially contained in the actor span to match it.
+                If exact, the span must be exactly the same to match an participant.
+                If partial, the span must be partially contained in the participant span to match it.
 
         Returns
         -------
-                the key of the actor with the corresponding character offset
+                the key of the participant with the corresponding character offset
                 or None if it doesn't exist
         """
         if match_type == "exact":
-            for key in self.actors.keys():
-                if self.actors[key].character_span == char_span:
+            for key in self.participants.keys():
+                if self.participants[key].character_span == char_span:
                     return str(key)
         elif match_type == "partial":
-            for key in self.actors.keys():
-                aSpan = self.actors[key].character_span
+            for key in self.participants.keys():
+                aSpan = self.participants[key].character_span
                 if aSpan[0] <= char_span[0] <= aSpan[1]:
                     return str(key)
                 elif aSpan[0] <= char_span[1] <= aSpan[1]:
@@ -422,24 +455,24 @@ class Narrative:
 
         return None
 
-    def _add_actor(self, char_span, lexical_head="Pronoun", actor_type="Other"):
+    def _add_participant(self, char_span, lexical_head="Pronoun", participant_type="Other"):
         """
         Parameters
         ----------
         char_span : (int, int)
-                the actor character offset
+                the participant character offset
         lexical_head: str
-                The lexical head of the actor: "Noun" or "Pronoun" -> Defaults to "Pronoun"
-        actor_type: str
-                The type of the actor as expressed by the NER models -> Defaults to "Other"
+                The lexical head of the participant: "Noun" or "Pronoun" -> Defaults to "Pronoun"
+        participant_type: str
+                The type of the participant as expressed by the NER models -> Defaults to "Other"
 
         Returns
         -------
-                the key of the new added actor
+                the key of the new added participant
         """
         key = 'T' + str(self._id)
-        self.actors[key] = ActorEntity(self.text[char_span[0]:char_span[1]], char_span, lexical_head,
-                                       actor_type)  # Hard-coded lexical head and type as 'Pronoun' and 'Other', resp., for now
+        self.participants[key] = ParticipantEntity(self.text[char_span[0]:char_span[1]], char_span, lexical_head,
+                                       participant_type)  # Hard-coded lexical head and type as 'Pronoun' and 'Other', resp., for now
 
         self._id += 1
 
@@ -448,7 +481,7 @@ class Narrative:
     def _get_event_key(self, char_span, match_type="exact"):
         """
         Get the key of an event entity based on its character span on the full document text
-        todo: Esta função está redundante com a _get_actor_key. Só muda a lista em que se procura
+        nota: Esta função está redundante com a _get_participant_key. Só muda a lista em que se procura
 
         @param char_span: The character span of the event in the text
         @return: The key of the event if it is found. None otherwise
@@ -506,6 +539,41 @@ class Narrative:
 
         return key
 
+    def _get_span_segments(self, el):
+        """
+        If a element of the narrative is composed of various segments (multiline annotations), then we have
+        to collect each segment. Then it returns the character offsets of the segments and the segment text
+        @param el:
+        @return:
+        """
+
+        el_text = self.text[el.character_span[0]:el.character_span[1]]
+        result = [_.start() for _ in re.finditer("\n", el_text)]
+
+        span0 = el.character_span[0]
+        span1 = el.character_span[0] + result[0]
+        char_span_text = f"{span0} {span1};"
+        span_text = f"{self.text[span0:span1]}"
+        idx_result = 0
+
+        while idx_result < len(result):
+
+            span0 = str(el.character_span[0] + result[idx_result] + 1)
+            if idx_result == len(result) - 1:
+                span1 = str(el.character_span[1])
+                char_span_text += span0 + " " + span1
+            else:
+                span1 = str(el.character_span[0] + result[idx_result + 1] - 1)
+                char_span_text += span0 + " " + span1 + ";"
+
+            # find the first non-space char to start the next text segment
+            start_text_span = find_first_non_space(self.text, el.character_span[0] + result[idx_result])
+
+            span_text += " " + f"{self.text[start_text_span:int(span1)]}"
+            idx_result += 1
+
+        return char_span_text, span_text
+
     def ISO_annotation(self):
         """
         Parameters
@@ -521,40 +589,59 @@ class Narrative:
 
         r = ""
 
-        for actor_id in self.actors:
-            actor = self.actors[actor_id]
-            if '\n' in actor.text:
-                continue
-            # T1 ACTOR 0 22 O presidente de França
-            r += (actor_id + '\t' + 'Participant' + ' ' + str(actor.character_span[0]) + ' ' + str(
-                actor.character_span[1]) + '\t' + actor.text + '\n')
+        for participant_id in self.participants:
+            participant = self.participants[participant_id]
+
+            # brat does not deal well with multiline annotation, so
+            # we need to split into several segments a multiline annotation
+            if '\n' in participant.text:
+                char_span_text, span_text = self._get_span_segments(participant)
+
+
+                r += (participant_id + '\t' + 'Participant' + ' ' + char_span_text + '\t' + span_text + '\n')
+            else:
+                # T1 participant 0 22 O presidente de França
+                span_text = self.text[participant.character_span[0]:participant.character_span[1]]
+                r += (participant_id + '\t' + 'Participant' + ' ' + str(participant.character_span[0]) + ' ' + str(
+                    participant.character_span[1]) + '\t' + span_text + '\n')
 
             # A1 Lexical_Head T1 Noun
-            r += ('A' + str(attribute_id) + '\t' + 'Lexical_Head' +
-                  ' ' + actor_id + ' ' + actor.lexical_head + '\n')
+            try:
+                r += ('A' + str(attribute_id) + '\t' + 'Lexical_Head' +
+                       ' ' + participant_id + ' ' + participant.lexical_head + '\n')
+            except TypeError:
+                print(attribute_id, type(attribute_id), participant_id,type(participant_id), \
+                      participant.lexical_head, type(participant.lexical_head))
+
             attribute_id += 1
 
             # A2 Individuation T1 Individual
             r += ('A' + str(attribute_id) + '\t' + 'Individuation_Domain' +
-                  ' ' + actor_id + ' ' + actor.individuation + '\n')
+                  ' ' + participant_id + ' ' + participant.individuation + '\n')
             attribute_id += 1
 
-            # A3 Actor_Type T1 Per
+            # A3 participant_Type T1 Per
             r += ('A' + str(attribute_id) + '\t' + 'Participant_Type_Domain' +
-                  ' ' + actor_id + ' ' + actor.type + '\n')
+                  ' ' + participant_id + ' ' + participant.type + '\n')
             attribute_id += 1
 
             # A4 Involvement T1 1
             r += ('A' + str(attribute_id) + '\t' + 'Involvement' +
-                  ' ' + actor_id + ' ' + actor.involvement + '\n')
+                  ' ' + participant_id + ' ' + participant.involvement + '\n')
             attribute_id += 1
 
         for time_id in self.times:
             time = self.times[time_id]
 
-            # T26 TIME_X3 413 429 novembro de 2015
-            r += (time_id + '\t' + 'Time' + ' ' + str(time.character_span[0]) + ' ' + str(
-                time.character_span[1]) + '\t' + time.text + '\n')
+            if '\n' in time.text:
+                char_span_text, span_text = self._get_span_segments(time)
+
+                r += (time_id + '\t' + 'Time' + ' ' + char_span_text + '\t' + span_text + '\n')
+            else:
+                # T26 TIME_X3 413 429 novembro de 2015
+                span_text = self.text[time.character_span[0]:time.character_span[1]]
+                r += (time_id + '\t' + 'Time' + ' ' + str(time.character_span[0]) + ' ' + str(
+                    time.character_span[1]) + '\t' + span_text + '\n')
 
             # A55 Time_Type T26 Date
             # r += ('A' + str(attribute_id) + '\t' + 'Time_Type' + ' ' + time_id + ' ' + time.type + '\n')
@@ -587,21 +674,22 @@ class Narrative:
             event = self.events[event_id]
             if len(event.text.strip()) == 0:
                 continue
-            # T22 EVENT 312 328 is strengthening
-            r += (event_id + '\t' + 'Event' + ' ' + str(event.character_span[0]) + ' ' + str(
-                event.character_span[1]) + '\t' + event.text + '\n')
 
-            # E9 EVENT:T22
-            #r += (f"{event_id}\tEVENT:T{str(self._id)}\n")
+            if '\n' in event.text:
+                char_span_text, span_text = self._get_span_segments(event)
 
-            r += (f"A{attribute_id}\tClass {event_id} {event.event_class}\n")
-            attribute_id += 1
+                r += (event_id + '\t' + 'Event' + ' ' + char_span_text + '\t' + span_text + '\n')
+            else:
+                span_text = self.text[event.character_span[0]:event.character_span[1]]
 
-            r += (f"A{attribute_id}\tTense {event_id} {event.tense}\n")
-            attribute_id += 1
+                r += (event_id + '\t' + 'Event' + ' ' + str(event.character_span[0]) + ' ' + str(
+                    event.character_span[1]) + '\t' + span_text + '\n')
 
-            r += (f"A{attribute_id}\tPolarity {event_id} {event.polarity}\n")
-            attribute_id += 1
+            attr_dct = vars(event)
+            for att in attr_dct:
+                if att != "character_span" and att != "text":
+                    r += (f"A{attribute_id}\t{capfirst(att)} {event_id} {attr_dct[att]}\n")
+                    attribute_id += 1
 
             #r += (f"A{attribute_id}\tFactuality {event_id} {event.factuality}\n")
             #import pdb

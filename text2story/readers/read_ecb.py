@@ -9,7 +9,7 @@ from text2story.readers.read import Read
 from text2story.readers.token_corpus import TokenCorpus
 
 from text2story.core.narrative import Narrative
-from text2story.core.entity_structures import ActorEntity, EventEntity, TimeEntity
+from text2story.core.entity_structures import ParticipantEntity, EventEntity, TimeEntity
 from text2story.readers.read_brat import ReadBrat
 
 def dir_path(path):
@@ -258,7 +258,7 @@ class ReadECB(Read):
         #    self.tokens[index_list[0] - 1].offset, self.tokens[index_list[0] - 1].offset + len(raw_str)),
         #                   lexical_head,
         #                   actor_type)
-        return ActorEntity(raw_str, (
+        return ParticipantEntity(raw_str, (
                            offset_start, offset_start + len(raw_str)),
                            lexical_head,
                            actor_type)

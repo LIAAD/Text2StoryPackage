@@ -4,6 +4,7 @@
 import re
 import glob
 import os
+import string
 
 import platform
 
@@ -234,8 +235,9 @@ def write_output(dexpr_list, dr_set, actors, actors_events, out_file):
 
                 var = dexpr('%s' % x[0].get('event_var'))
                 event_str = ''.join([x.capitalize() for x in x[0].get('event_str').split()])
+                #event_str = event_str.replace('-', '')
+                event_str = "".join([c for c in event_str if c not in string.punctuation])
                 event_str = event_str + '=' + x[0].get('event_var')
-                event_str = event_str.replace('-', '')
                 var_ = dexpr('%s' % event_str)
                 tmp_dr = []
 

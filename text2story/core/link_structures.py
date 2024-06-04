@@ -6,8 +6,16 @@
 
 from text2story.core.exceptions import  InvalidLink
 
-class AspectualLink:
-    pass
+class MeasureLink:
+    def __init__(self, arg1, arg2, type='distance', id_rel = ""):
+        self.type = type
+        self.arg1 = arg1
+        self.arg2 = arg2
+        self.id = id_rel
+
+    def __str__(self):
+        return f"{self.id}\tMLINK_{self.type} Arg1:{self.arg1} Arg2:{self.arg2}"
+
 
 class MovementLink:
     def __init__(self, arg1, arg2, type='spatialRelation', id_rel = ""):
@@ -74,6 +82,16 @@ class TemporalLink:
     def __str__(self):
         return f"{self.id}\tTLINK_{self.type} Arg1:{self.arg1} Arg2:{self.arg2}"
 
+class AspectualLink:
+    def __init__(self, arg1, arg2, type='initiates', id_rel = ""):
+        self.type = type
+        self.arg1 = arg1
+        self.arg2 = arg2
+        self.id = id_rel
+
+    def __str__(self):
+        return f"{self.id}\tALINK_{self.type} Arg1:{self.arg1} Arg2:{self.arg2}"
+
 def createLinkObject( arg1, arg2, type, subtype, id_rel):
     if type == "TLINK":
         return TemporalLink(arg1, arg2, subtype, id_rel)
@@ -87,5 +105,9 @@ def createLinkObject( arg1, arg2, type, subtype, id_rel):
         return QualitativeSpatialLink(arg1, arg2, subtype, id_rel)
     elif type == "MOVELINK":
         return MovementLink(arg1, arg2, subtype, id_rel)
+    elif type == "ALINK":
+        return AspectualLink(arg1, arg2, subtype, id_rel)
+    elif type == "MLINK":
+        return MeasureLink(arg1, arg2, subtype, id_rel)
     else:
         raise InvalidLink(type)

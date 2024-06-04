@@ -27,14 +27,21 @@ def run():
         start(language)
         tools = config_exp[name_experiment]["tools"]
 
-        narrative_elements = {"participant":tools["participant"],\
-                          "time":tools["time"],\
-                          "event":tools["event"],\
-                          "srlink":tools["srlink"]}
+        narrative_elements = {}
+        if "participant" in tools:
+            narrative_elements["participant"] = tools["participant"]
+        if "time" in tools:
+            narrative_elements["time"] = tools["time"]
+        if "event" in tools:
+            narrative_elements["event"] = tools["event"]
+        if "srlink" in tools:
+            narrative_elements["srlink"] = tools["srlink"]
 
         data_dir = config_exp[name_experiment]["data"]
+        split_info = config_exp[name_experiment].get("split", None)
+
         res = build_evaluation(narrative_elements=narrative_elements, language=language, data_dir=data_dir,
-                           results_dir=name_experiment)
+                           results_dir=name_experiment,split=split_info)
 
         with open("%s_metrics.txt" % name_experiment, "w") as fd:
             write_metrics_result(res, fd)

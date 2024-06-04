@@ -1,3 +1,8 @@
+from collections import Counter
+
+import nltk
+from sklearn.metrics import cohen_kappa_score
+
 
 def partial_match(b1, e1, b2, e2):
     """
@@ -111,6 +116,7 @@ def get_intervals(ann_lst):
     """
 
     interval_lst = []
+
     for el in ann_lst:
         s1, e1 = el["offset1"]
         interval_lst.append((s1, e1, el["id"]))
@@ -455,4 +461,89 @@ def compute_strict_scores_srlink(ann_pred, ann_target):
             search_target[id_srlink] = None
 
     return search_pred, search_target
+
+def compute_bleu_lines(data_lines1, data_lines2):
+
+    text_span_map = {}
+
+    for d1 in data_lines1:
+        t1 = nltk.word_tokenize(d1['text_span'])
+        span_id1 = d1['span_id']
+
+        for d2 in data_lines2:
+
+            t2 = nltk.word_tokenize(d2['text_span'])
+
+            bleu_score = nltk.translate.bleu([t1], t2, (1,))
+            if span_id1 in text_span_map:
+                maxb, span_id2 = text_span_map[span_id1]
+                if maxb < bleu_score:
+                    text_span_map[span_id1] = (bleu_score, d2['span_id'])
+            else:
+                 text_span_map[span_id1] = (bleu_score, d2['span_id'])
+
+    for span_id1 in text_span_map:
+        bleu, _ = text_span_map[span_id1]
+        if bleu < 0.8:
+            text_span_map[span_id1] = (0, None)
+    return text_span_map
+
+def compute_iaa_link(match_pred, reader1, reader2, link_type):
+
+    all_entities_pairs = []
+    for element_id_a in match_pred:
+        for element_id_b in match_pred:
+            all_entities_pairs.append((element_id_a, element_id_b))
+
+    links_lst = []
+    links_type_lst = []
+    for (element_id_a, element_id_b) in all_entities_pairs:
+        # check if annotator1 annotated some relation between event_a and event_b
+        relation1 = reader1.get_relation(element_id_a, element_id_b)
+        element_id_a_2 = match_pred[element_id_a]
+        element_id_b_2 = match_pred[element_id_b]
+
+        relation2 = reader2.get_relation(element_id_a_2, element_id_b_2)
+
+        if relation1 == None and relation2 == None:
+            links_lst.append(("none", "none"))
+            links_type_lst.append(("none", "none"))
+        else:
+            if relation1 == None:
+                if relation2.startswith(link_type):
+                    links_lst.append(("none", link_type.lower()))
+                    links_type_lst.append(("none", relation2))
+                else:
+                    links_lst.append(("none", "other"))
+                    links_type_lst.append(("none", "other"))
+            else:
+                if relation2 == None:
+                    if relation1.startswith(link_type):
+                        links_lst.append((link_type.lower(), "none"))
+                        links_type_lst.append((relation1, "none"))
+                    else:
+                        links_lst.append(("other", "none"))
+                        links_type_lst.append(("other", "none"))
+                else:
+                    if relation1.startswith(link_type) and relation2.startswith(link_type):
+                        links_lst.append((link_type.lower(), link_type.lower()))
+                        links_type_lst.append((relation1, relation2))
+                    else:
+                        links_lst.append(("other", "other"))
+                        links_type_lst.append(("other", "other"))
+
+    link_annotations1 = [link[0] for link in links_lst]
+    link_annotations2 = [link[1] for link in links_lst]
+
+    link_kappa = cohen_kappa_score(link_annotations1, link_annotations2)
+
+    link_type_annotations1 = [link[0] for link in links_type_lst]
+    link_type_annotations2 = [link[1] for link in links_type_lst]
+
+    link_type_kappa = cohen_kappa_score(link_type_annotations1, link_type_annotations2)
+
+    return link_kappa, link_type_kappa
+
+
+
 

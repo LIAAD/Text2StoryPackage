@@ -3,6 +3,11 @@ This is a script to generate visualization of
 brat files in a batch way.
 """
 import plantuml
+import matplotlib.pyplot as plt
+
+import networkx as nx
+from netgraph import Graph, ArcDiagram, InteractiveGraph
+import warnings
 
 import argparse
 import os
@@ -57,14 +62,202 @@ def create_plantuml(actors_dict, events_dict, events_relations, non_event_relati
 
     for e in events_relations:
         for (ref1,rel_type,ref2) in events_relations[e]:
-            participant1 = actors_dict[ref1]
-            participant2 = actors_dict[ref2]
+
+            # check for redundandt actor inside string and displays only the first one
+            actors_ref1_lst = actors_dict[ref1].split(",")
+            actors_ref2_lst = actors_dict[ref2].split(",")
+
+            if len(actors_ref1_lst) > 1:
+                participant1 = "%s (%d)" % (actors_ref1_lst[0], len(actors_ref1_lst))
+            else:
+                participant1 = "%s" % (actors_ref1_lst[0])
+
+            if len(actors_ref2_lst) > 1:
+                participant2 = "%s (%d)" % (actors_ref2_lst[0], len(actors_ref2_lst))
+            else:
+                participant2 = "%s" % (actors_ref2_lst[0])
+
             msc_str = msc_str + "\"%s\"->\"%s\":%s (%s)\n" % (participant1, participant2, events_dict[e],rel_type)
         #print("-->",e,events_relations[e])
 
     return msc_str
 
+def build_graph(actors_dict, events_dict, events_relations, non_event_relations):
+
+    G = nx.MultiDiGraph()
+    labels = {}
+    key2labels = {}
+    for e in events_relations:
+        for (ref1,rel_type,ref2) in events_relations[e]:
+
+            # check for redundandt actor inside string and displays only the first one
+            actors_ref1_lst = actors_dict[ref1].split(",")
+            actors_ref2_lst = actors_dict[ref2].split(",")
+
+            if len(actors_ref1_lst) > 1:
+                participant1 = "%s (%d)" % (actors_ref1_lst[0], len(actors_ref1_lst))
+            else:
+                participant1 = "%s" % (actors_ref1_lst[0])
+
+            if len(actors_ref2_lst) > 1:
+                participant2 = "%s (%d)" % (actors_ref2_lst[0], len(actors_ref2_lst))
+            else:
+                participant2 = "%s" % (actors_ref2_lst[0])
+
+            if participant1 not in key2labels:
+                G.add_node(len(key2labels))
+                key2labels[participant1] = len(key2labels.keys())
+
+            node1 = key2labels[participant1]
+
+            if participant2 not in key2labels:
+                G.add_node(len(key2labels))
+                key2labels[participant2] = len(key2labels.keys())
+
+            node2 = key2labels[participant2]
+
+            label_tokens = events_dict[e].split()
+            if len(label_tokens) < 4:
+                label_edge = "%s" % (events_dict[e])
+            else:
+                label_edge = " ".join(label_tokens[:3]) + "..."
+
+            G.add_edge(node1, node2, label=label_edge)
+
+            # print("node1: %d node2: %d label_edge:%s" % (node1, node2, label_edge))
+
+    for k in key2labels:
+        labels[key2labels[k]] = k
+
+    return G, labels
+
+def process_edge_labels(edge_labels):
+    """
+    It process edge labels to find if there are more than one label per node, then
+    join the labels in one label
+
+    @param edge_labels: a dictionary that contains (tuple):string as a map for edges and their labels.
+    @return: Dict
+    """
+    new_edge_labels = {}
+
+    for edge in edge_labels:
+        n0 = edge[0]
+        n1 = edge[1]
+
+        if (n0, n1) in new_edge_labels:
+            new_edge_labels[(n0, n1)] = new_edge_labels[(n0, n1)] + " |\n " + edge_labels[edge]
+        else:
+            new_edge_labels[(n0, n1)] = edge_labels[edge]
+
+    return new_edge_labels
+
+def drs2kg(drs_file, output=None):
+    #plt.tight_layout()
+    #plt.figure(figsize=(9, 9))
+
+    if output is None:
+        file_name_out = os.path.basename(drs_file)
+        file_name_out = os.path.splitext(drs_file)[0]
+    else:
+        file_name_out = output
+
+    # get entities
+    actors_dict, events_dict, events_relations, non_event_relations = \
+            parser.parse_drs(drs_file)
+
+    file_name_graph_fig = "%s_graph.png" % (file_name_out)
+
+    G, labels = build_graph(actors_dict, events_dict, \
+                    events_relations, non_event_relations)
+    edge_labels = nx.get_edge_attributes(G, "label")
+
+    edge_labels = process_edge_labels(edge_labels)
+
+    node_size = {}
+    for nnode in labels:
+        if len(labels[nnode]) > 5:
+            node_size[nnode] = 7
+        else:
+            node_size[nnode] = len(labels[nnode])
+
+    fig, ax = plt.subplots(figsize=(9, 9))
+    plot_instance = ArcDiagram(G, edge_layout_kwargs=dict(rad=0.5), node_labels=labels,\
+                          node_label_fontdict=dict(size=10),\
+                          node_size=node_size, edge_labels=edge_labels, node_layout="circular",\
+                               edge_label_fontdict=dict(fontsize=9))
+
+
+    fig.savefig(file_name_graph_fig, format='png')
+
+def drs2kginteractive(drs_file, output=None):
+    #plt.tight_layout()
+    #plt.figure(figsize=(9, 9))
+
+    if output is None:
+        file_name_out = os.path.basename(drs_file)
+        file_name_out = os.path.splitext(drs_file)[0]
+    else:
+        file_name_out = output
+
+    # get entities
+    actors_dict, events_dict, events_relations, non_event_relations = \
+            parser.parse_drs(drs_file)
+
+    file_name_graph_fig = "%s_graph.png" % (file_name_out)
+
+    G, labels = build_graph(actors_dict, events_dict, \
+                    events_relations, non_event_relations)
+    edge_labels = nx.get_edge_attributes(G, "label")
+
+    edge_labels = process_edge_labels(edge_labels)
+
+    node_size = {}
+    for nnode in labels:
+        if len(labels[nnode]) > 5:
+            node_size[nnode] = 7
+        else:
+            node_size[nnode] = len(labels[nnode])
+
+
+    fig, ax = plt.subplots(figsize=(9, 9))
+    plot_instance = InteractiveGraph(G, edge_layout_kwargs=dict(rad=0.5), node_labels=labels,\
+                          node_label_fontdict=dict(size=10),\
+                          node_size=node_size, edge_labels=edge_labels, node_layout="spring",\
+                               edge_label_fontdict=dict(fontsize=6))
+
+    plt.show()
+
+def drs2msc(drs_file, output=None):
+    # url server to generate the figures
+    url = "http://www.plantuml.com/plantuml/img/"
+    pl = plantuml.PlantUML(url)
+
+    if output is None:
+        file_name_out = os.path.basename(drs_file)
+        file_name_out = os.path.splitext(drs_file)[0]
+    else:
+        file_name_out = output
+
+    # get entities
+    actors_dict, events_dict, events_relations, non_event_relations = \
+        parser.parse_drs(drs_file)
+
+    # build plantuml txt file
+    msc_str = create_plantuml(actors_dict, events_dict, \
+                              events_relations, non_event_relations)
+
+    with open(file_name_out, "w") as fd:
+        fd.write(msc_str)
+
+    file_name_fig = "%s.png" % (file_name_out)
+    success = pl.processes_file(file_name_out, outfile=file_name_fig)
+
+
+
 def drs2vis(drs_file):
+    warnings.warn("drs2viz is deprecated, use drs2msc or drs2kg", DeprecationWarning)
+
     # url server to generate the figures
     url = "http://www.plantuml.com/plantuml/img/"
     pl = plantuml.PlantUML(url)
@@ -80,12 +273,16 @@ def drs2vis(drs_file):
     msc_str = create_plantuml(actors_dict, events_dict, \
                                 events_relations, non_event_relations)
 
+
     with open(file_name_out,"w") as fd:
         fd.write(msc_str)
 
     file_name_fig = "%s.png" % (file_name_out)
 
     success = pl.processes_file(file_name_out, outfile=file_name_fig)
+
+
+
 
 def msc_vis(lst_files, outputdir):
 

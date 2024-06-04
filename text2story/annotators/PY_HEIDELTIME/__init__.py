@@ -6,6 +6,7 @@
             'en' : default
             'pt' : default
 '''
+import traceback
 
 #from text2story.core.exceptions import InvalidLanguage
 
@@ -50,53 +51,18 @@ def extract_times(lang, text, publication_time):
     lang = lang_mapping[lang]
 
     # annotations = py_heideltime(re.escape(text), language=lang, document_creation_time=publication_time)
-    annotations = py_heideltime(text, language=lang, document_creation_time=publication_time)
-
-    pattern = r'<TIMEX3 tid=.*? type=.*? value=.*?>.*?</TIMEX3>'
-
-    timexs_list = re.finditer(pattern, annotations[2])
+    try:
+        annotations = py_heideltime.heideltime(text, lang, "news")
+    except IndexError as e:
+        #traceback.print_exc()
+        annotations = []
+        print()
+        print("WARNING: no time expression processed in this document for some bug in py_heideltime.")
 
     timexs = []
-
-    char_offset = 0
-
-    for timex in timexs_list:
-        match = timex.group()
-
-        i = 13 # Discard all till the starting of the 'tid' value
-        while match[i] != '"': # Consume the 'tid' value
-            i += 1
-
-        i += 8 # Now, we are at the field 'type'
-        timex_type = ''
-        while match[i] != '"':
-            timex_type += match[i]
-            i += 1
-
-        i += 9 # Now, we are the field 'value'
-        timex_value = ''
-        while match[i] != '"':
-            timex_value += match[i]
-            i += 1
-
-        # Now, we are the text of the timex
-        while match[i] != '>': #ignore everything until it reaches the end of the tag
-            i += 1
-        i += 1
-
-        timex_text = ''
-        while match[i] != '<':
-            timex_text += match[i]
-            i += 1
-
-        char_offset = text.find(timex_text, char_offset)
-
-        timex_start_offset = char_offset
-        timex_end_offset = char_offset + len(timex_text)
-        timex_character_span =  (timex_start_offset, timex_end_offset)
-        char_offset = timex_end_offset
-
-        timex = (timex_character_span, timex_type, timex_value)
+    for ann in annotations:
+        start, end = ann["span"][0], ann["span"][1]
+        timex = ((start,end), ann["type"], ann["text"])
         timexs.append(timex)
 
     return timexs

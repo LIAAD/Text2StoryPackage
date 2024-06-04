@@ -16,7 +16,9 @@ import numpy as np
 
 
 # regular expression of an integer number
-NUMBER_RE = re.compile("^[0-9]*[1-9][0-9]*$")
+# NUMBER_RE = re.compile("^[0-9]*[1-9][0-9]*$")
+NUMBER_RE = re.compile("^[0-9]+$")
+
 LINK_TYPES = ["SEMROLE", "SRLINK"]
 
 LINK_TYPES = ["SEMROLE","SRLINK"]
@@ -52,18 +54,25 @@ class ReadBrat(read.Read):
       Reader to brat file annotations and their text files
     """
 
-    def __init__(self):
+    def __init__(self, lang="en"):
         """
         Load spacy model to read process brat files. Also
         store the files processed.
         """
-        if not(spacy.util.is_package('pt_core_news_lg')):
-            spacy.cli.download('pt_core_news_lg')
+        if lang == "pt":
+            if not(spacy.util.is_package('pt_core_news_lg')):
+                spacy.cli.download('pt_core_news_lg')
 
-        self.nlp = spacy.load("pt_core_news_lg")
+
+            self.nlp = spacy.load("pt_core_news_lg")
 
 
-        self.nlp.tokenizer = custom_tokenizer(self.nlp)
+            self.nlp.tokenizer = custom_tokenizer(self.nlp)
+        else:
+            if not (spacy.util.is_package('en_core_web_lg')):
+                spacy.cli.download('en_core_web_lg')
+
+            self.nlp = spacy.load('en_core_web_lg')
 
         self.file_lst = []
         self.ann_ref = {}
@@ -141,6 +150,7 @@ class ReadBrat(read.Read):
 
         (left1_start, left1_end) = self._get_left_span(el1)
         (left2_start, left2_end) = self._get_left_span(el2)
+
 
         (right1_start, right1_end) = self._get_right_span(el1)
         (right2_start, right2_end) = self._get_right_span(el2)
@@ -244,6 +254,30 @@ class ReadBrat(read.Read):
 
         return new_ann
 
+    def get_attribute_value(self, element_id, attr_name):
+        if attr_name in self.ann_ref:
+            if element_id in self.ann_ref[attr_name]:
+                return self.ann_ref[attr_name][element_id]
+
+    def get_relation(self, element_a, element_b):
+        """
+        Get the relation name between two entities (their ids)
+        @param element_a: String with the id of an entity
+        @param element_b: String with the id of an entity
+        @return: String with relation name, NOne if there is no relation between
+        elements A and B
+        """
+
+        annotation_types = list(self.ann_ref.keys())
+        annotation_links_types = [ann_type for ann_type in annotation_types if "LINK" in ann_type]
+
+        for relation_name in  annotation_links_types:
+            if element_a in self.ann_ref[relation_name]:
+                if element_b in self.ann_ref[relation_name][element_a]:
+                    return relation_name
+
+
+
     def read_annotation_file(self, file_ann, merge_entities=False):
         """
         It reads only the annotation file, then returns
@@ -255,15 +289,23 @@ class ReadBrat(read.Read):
         """
 
         ann = {"Event": [], "Actor": [], "Time": [], "TIME_X3": [], \
-                "ACTOR": [], "Participant": [],"SRLINK":[]}
+                "ACTOR": [], "Participant": [],"SRLINK":[],"OLINK":[],"TLINK":[]}
 
         with open(file_ann, "r") as fd:
+            last_line_type = None
             for line in fd:
                 ann_type = None
                 if line[0] != '#':
 
                     line_toks = line.split()
+                    if len(line_toks) < 3:
+                        if line[0] != 'T' and line[0] != 'A' and line[0] != 'R' and last_line_type in ann.keys():
+                            ann[last_line_type][-1]["value"] += " " + line.strip()
+                        else:
+                            raise Exception(f"Invalid standoff line:{line}")
+                        continue
                     ann_type = line_toks[1]
+                    last_line_type = ann_type
 
                     if line[0] == 'T':
                         # TODO: catalogar aqui todos as entidades em um mapeamento
@@ -272,20 +314,29 @@ class ReadBrat(read.Read):
                             ann[ann_type] = []
 
                         if ';' in line_toks[3]:
-                            # this situation is when the annotation of th event
-                            # is two segments not adjacents
-                            offset1_start = int(line_toks[2])
-                            offset2_end = int(line_toks[4])
 
-                            offset_toks = line_toks[3].split(';')
-                            offset1_end = int(offset_toks[0])
-                            offset2_start = int(offset_toks[1])
+                            start_range = int(line_toks[2])
+                            offset_lst = []
 
-                            value = " ".join(line_toks[5:])
+                            idx_toks = 3
+                            while ';' in line_toks[idx_toks]:
+                                tmp = line_toks[idx_toks].split(';')
+                                end_range = int(tmp[0])
+                                offset_lst.append((start_range, end_range))
 
-                            ann[ann_type].append({"id":line_toks[0],"offset1": (offset1_start, offset1_end), \
-                                              "offset2": (offset2_start, offset2_end), \
-                                              "value": value})
+                                start_range = int(tmp[1])
+                                idx_toks += 1
+
+                            end_range = int(line_toks[idx_toks])
+                            offset_lst.append((start_range, end_range))
+
+                            segment_ann = {"id":line_toks[0]} # annotation multi-segment annotation
+                            for idx_offset, (start_range, end_range) in enumerate(offset_lst):
+                                segment_ann[f"offset{idx_offset}"] = (start_range, end_range)
+
+                            value = " ".join(line_toks[idx_toks + 1:])
+                            segment_ann["value"] = value
+                            ann[ann_type].append(segment_ann)
 
                         else:
                             offset1_start = int(line_toks[2])
@@ -296,25 +347,33 @@ class ReadBrat(read.Read):
                             ann[ann_type].append({"id":line_toks[0],"offset1": (offset1_start, offset1_end), \
                                               "value": value})
                     elif line[0] == 'R':
-                        if ann_type.startswith("SEMROLE") or ann_type.startswith("SRLINK"):
-                            e1 = line_toks[2].split(":")[1] # entity 1
-                            e2 = line_toks[3].split(":")[1] # entity 2
-                            ann["SRLINK"].append({"id":line_toks[0],"args":(e1, e2)})
+                        e1 = line_toks[2].split(":")[1]  # entity 1
+                        e2 = line_toks[3].split(":")[1]  # entity 2
+                        rel_id = line_toks[0]
+                        if ann_type in ann:
+                            ann[ann_type].append({"id":rel_id,"args":(e1, e2)})
+                        else:
+                            ann[ann_type] = [{"id": rel_id, "args": (e1, e2)}]
+
+
+                        if ann_type in self.ann_ref:
+                            if e1 in self.ann_ref[ann_type]:
+                                self.ann_ref[ann_type][e1].append(e2)
+                            else:
+                                self.ann_ref[ann_type][e1] = [e2]
+                        else:
+                            self.ann_ref[ann_type] = {e1: [e2]}
 
                     elif line[0] == 'A': # for now ignore attributes
 
-                        ref = line[2]
-                        attr_name = line[1]
-                        attr_value = line[3]
+                        ref = line_toks[2]
+                        attr_name = line_toks[1]
+                        attr_value = line_toks[3]
 
                         if ann_type in self.ann_ref:
-                            # ann_type keeps the last type of annotation
-                            if ref in self.ann_ref[ann_type]:
-                                self.ann_ref[ann_type][ref][attr_name] =  attr_value
-                            else:
-                                self.ann_ref[ann_type][ref] = {attr_name: attr_value}
+                            self.ann_ref[ann_type][ref] = attr_value
                         else:
-                            self.ann_ref[ann_type] = {ref:{attr_name:attr_value}}
+                            self.ann_ref[ann_type] = {ref:attr_value}
         if merge_entities:
             return self.merge_entity_span(ann)
         else:
@@ -343,6 +402,7 @@ class ReadBrat(read.Read):
 
         for dirpath, dirnames, filenames in os.walk(data_dir):
             for f in filenames:
+
                 if f.endswith(".ann"):
 
                     p = Path(f)
@@ -350,6 +410,7 @@ class ReadBrat(read.Read):
                         continue
                  
                     fullname = os.path.join(data_dir, p.stem)
+                    #print("-->", fullname)
                     token_lst = self.process_file(fullname)
                     self.file_lst.append(fullname + ".txt")
 
@@ -381,10 +442,14 @@ class ReadBrat(read.Read):
 
     
         sent_id = -1
+        clause_id = 0
         for tok_idx, tok in enumerate(doc):
-
             if tok.is_sent_start:
                 sent_id += 1
+
+            # Check if the token marks the end of a clause
+            if tok.dep_ in ["punct", "mark"]:
+                clause_id += 1
 
             
             mytok = token_corpus.TokenCorpus()
@@ -398,7 +463,8 @@ class ReadBrat(read.Read):
             mytok.head_lemma = tok.head.lemma_
             mytok.offset = tok.idx
             mytok.sent_id = sent_id
-
+            mytok.clause_id = clause_id
+            #print("-->",clause_id, sent_id)
 
 
             ans = self.search_all_idx(tok.idx, ann_idx)
@@ -406,6 +472,7 @@ class ReadBrat(read.Read):
             # TODO: it is necessary perform a more efficient search
             # a possible subtoken annotation
             # perform more than one search, and build a list of id's
+
             ans_sub = self.search_subtoken(tok.idx, tok.idx + len(tok.text), \
                         ann_idx)
 
@@ -471,7 +538,7 @@ class ReadBrat(read.Read):
         ARG_REL = re.compile("T\d+") 
 
         with open(file_ann, "r") as fd:
-            
+
             for line in fd:
                 line_toks = line.split()
                 if line[0] != '#' and line[0] == 'T':
@@ -480,11 +547,33 @@ class ReadBrat(read.Read):
                     if ';' in line_toks[3]:
                         # this situation is when the annotation of th event
                         # is two segments not adjacents
-                        tmp = line_toks[3].split(';')
-                        ann[(int(line_toks[2]), int(tmp[0]))] = [(line_toks[0], line_toks[1], line_toks[5:])]
-                        ann[(int(tmp[1]), int(line_toks[4]))] = [(line_toks[0], line_toks[1], line_toks[5:])]
-                        ann_ref[line[0]] = (
-                            [(int(line_toks[2]), int(tmp[0])), (int(tmp[1]), int(line_toks[4]))], [])
+                        start_range = int(line_toks[2])
+                        offset_lst = []
+
+                        idx_toks = 3
+                        while ';' in line_toks[idx_toks]:
+
+                            tmp = line_toks[idx_toks].split(';')
+                            end_range = int(tmp[0])
+                            offset_lst.append((start_range, end_range))
+
+                            start_range = int(tmp[1])
+                            idx_toks += 1
+
+                        end_range = int(line_toks[idx_toks])
+                        offset_lst.append((start_range, end_range))
+
+                        for start_range, end_range in offset_lst:
+                            if (start_range, end_range) in ann:
+                                ann[(start_range, end_range)].append((line_toks[0], line_toks[1], line_toks[idx_toks + 1:]))
+                            else:
+                                ann[(start_range, end_range)] = [(line_toks[0], line_toks[1], line_toks[idx_toks + 1:])]
+
+                        #ann[(int(line_toks[2]), int(tmp[0]))] = [(line_toks[0], line_toks[1], line_toks[5:])]
+                        #ann[(int(tmp[1]), int(line_toks[4]))] = [(line_toks[0], line_toks[1], line_toks[5:])]
+                        #ann_ref[line[0]] = (
+                        #    [(int(line_toks[2]), int(tmp[0])), (int(tmp[1]), int(line_toks[4]))], [])
+                        ann_ref[line[0]] = (offset_lst, [])
 
 
                         ann_ref[line_toks[0]] = {}
@@ -552,7 +641,6 @@ class ReadBrat(read.Read):
             doc = self.nlp(fd.read())
             token_lst, ref2tok = self.extract_token_corpus(doc, idx_lst, ann, ann_ref)
 
-
         # update relation field for each token
         # each relation field is a list of TokenRelation object, which 
         # points to a TokenCorpus and specifies the type of relation
@@ -566,8 +654,11 @@ class ReadBrat(read.Read):
 
                         # the relation for the reference ref
                         for rel_id, rel_type, ref_arg,argn in ann_rel[ref]:
-                            rel_obj = token_corpus.TokenRelation(rel_id, ref2tok[ref_arg], rel_type, argn, ref_arg)
-                            mytok.relations.append(rel_obj)
+                            try:
+                                rel_obj = token_corpus.TokenRelation(rel_id, ref2tok[ref_arg], rel_type, argn, ref_arg)
+                                mytok.relations.append(rel_obj)
+                            except KeyError:
+                                print(f"Warning: The {rel_id} was not included in the doc since {ref_arg} was not found as annotation.")
 
         return token_lst
 

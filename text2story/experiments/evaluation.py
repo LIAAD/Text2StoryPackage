@@ -28,7 +28,6 @@ def dir_path(path):
         raise argparse.ArgumentTypeError(f"readable_dir:{path} is not a valid path")
 
 
-
 #########################################
 ### Prediction and evaluation methods ###
 #########################################
@@ -46,13 +45,15 @@ def extract_element(doc, el, tool):
     """
 
     if el == 'participant':
-        doc.extract_actors(tool)
+        doc.extract_participants(tool)
     elif el == 'event':
         doc.extract_events(tool)
     elif el == 'time':
         doc.extract_times(tool)
     elif el == 'srlink':
         doc.extract_semantic_role_links(tool)
+    elif el == 'olink':
+        doc.extract_objectal_links(tool)
     else:
         raise Exception("extract_element: Unrecognize element %s" % el)
 
@@ -81,7 +82,6 @@ def evaluate_element(pred_file, target_file, el):
 
 
 def get_element(elem, ann_pred, ann_target):
-
     if elem == "participant":
         return get_element_actor(ann_pred, ann_target)
     elif elem == "event":
@@ -89,18 +89,18 @@ def get_element(elem, ann_pred, ann_target):
     elif elem == "time":
         return get_element_time(ann_pred, ann_target)
     elif elem == "srlink":
-        return get_element_srlink(ann_pred,ann_target)
+        return get_element_srlink(ann_pred, ann_target)
     else:
-        raise Exception("get_element: Unrecognize element %s" % el)
+        raise Exception("get_element: Unrecognize element %s" % elem)
+
 
 def get_element_srlink(ann_pred, ann_target):
-
-    # aqui deveria retorna um dicionario  e nao uma lista, visto que existem varios tipos 
+    # aqui deveria retorna um dicionario  e nao uma lista, visto que existem varios tipos
     # de links. Por outro lado, para cada tipo, devem existir em pouca quantidade. 
     # o ideal é quantificar cada tipo de srlink. Dai analisar se vale a pena fazer a análise por
     # tipo aqui
-    #r += (f"{sem_link_id}\tSEMROLE_{sem_link.type} Arg1:{sem_link.event} Arg2:{sem_link.actor}\n")
-    #r += (f"{sem_link_id}\tSRLINK_{sem_link.type} Arg1:{sem_link.event} Arg2:{sem_link.actor}\n")
+    # r += (f"{sem_link_id}\tSEMROLE_{sem_link.type} Arg1:{sem_link.event} Arg2:{sem_link.actor}\n")
+    # r += (f"{sem_link_id}\tSRLINK_{sem_link.type} Arg1:{sem_link.event} Arg2:{sem_link.actor}\n")
     srlink_pred = []
     srlink_target = []
 
@@ -112,8 +112,8 @@ def get_element_srlink(ann_pred, ann_target):
         if k.startswith("SEMROLE") or k.startswith("SRLINK"):
             srlink_target = ann_target[k]
 
-    actors_pred, actors_target = get_element_actor(ann_pred, ann_target) 
-    event_pred, event_target = get_element_event(ann_pred, ann_target) 
+    actors_pred, actors_target = get_element_actor(ann_pred, ann_target)
+    event_pred, event_target = get_element_event(ann_pred, ann_target)
 
     pred = (actors_pred, event_pred, srlink_pred)
     target = (actors_target, event_target, srlink_target)
@@ -121,15 +121,14 @@ def get_element_srlink(ann_pred, ann_target):
 
 
 def get_element_event(ann_pred, ann_target):
-
     # compute accuracy of the exacttly same span
     event_pred = ann_pred["Event"]
     event_target = ann_target["Event"]
 
     return event_pred, event_target
 
-def get_element_actor(ann_pred, ann_target):
 
+def get_element_actor(ann_pred, ann_target):
     actor_pred = ann_pred["Actor"]
     # conditions to preserve compatibility between anotation versions
     if len(actor_pred) == 0:
@@ -145,8 +144,8 @@ def get_element_actor(ann_pred, ann_target):
 
     return actor_pred, actor_target
 
-def get_element_time(ann_pred, ann_target):
 
+def get_element_time(ann_pred, ann_target):
     time_pred = ann_pred["Time"]
     if len(time_pred) == 0:
         time_pred = ann_pred["TIME_X3"]
@@ -174,8 +173,8 @@ def evaluate_event(pred_file, target_file):
     event_pred = ann_pred["Event"]
     event_target = ann_target["Event"]
 
-    scores_relax = compute_relax_scores("event",event_pred, event_target)
-    scores = compute_strict_scores(event_pred, event_target)
+    scores_relax = compute_relax_scores("event", event_pred, event_target)
+    scores = compute_strict_scores("event", event_pred, event_target)
     return scores_relax, scores
 
 
@@ -209,7 +208,7 @@ def evaluate_actor(pred_file, target_file):
     if len(actor_target) == 0:
         actor_target = ann_target["Participant"]
 
-    scores_relax = compute_relax_scores("participant",actor_pred, actor_target)
+    scores_relax = compute_relax_scores("participant", actor_pred, actor_target)
     scores = compute_strict_scores("participant", actor_pred, actor_target)
     return scores_relax, scores
 
@@ -234,9 +233,10 @@ def evaluate_time(pred_file, target_file):
         time_pred = ann_pred["TIME_X3"]
     time_target = ann_target["Time"]
 
-    scores_relax = compute_relax_scores("time",time_pred, time_target)
-    scores = compute_strict_scores(time_pred, time_target)
+    scores_relax = compute_relax_scores("time", time_pred, time_target)
+    scores = compute_strict_scores("time", time_pred, time_target)
     return scores_relax, scores
+
 
 def evaluate_srlink(pred_file, target_file):
     """
@@ -252,16 +252,15 @@ def evaluate_srlink(pred_file, target_file):
     ann_pred = reader.read_annotation_file(pred_file)
     ann_target = reader.read_annotation_file(target_file)
 
-
     # compute accuracy of the exacttly same span
-    pred, target = get_element("srlink",ann_pred, ann_target)
-
+    pred, target = get_element("srlink", ann_pred, ann_target)
 
     scores_relax = compute_relax_scores("srlink", pred, target)
     scores = compute_strict_scores("srlink", pred, target)
     return scores_relax, scores
 
-def prediction(input_dir, results_dir, narrative_elements, language):
+
+def prediction(input_dir, results_dir, narrative_elements, language, split=None):
     """
     Read brat data (.ann and .txt files) in the input directory,
     and write the results (columns files: token, pred_label, target_label)
@@ -275,40 +274,44 @@ def prediction(input_dir, results_dir, narrative_elements, language):
     """
 
     reader = read_brat.ReadBrat()
-
-    doc_lst = reader.process(input_dir)
+    doc_lst = reader.process(input_dir, split)
 
     doc_pred_target = []  #
 
     for idx_doc, doc in enumerate(doc_lst):
+
+        ann_filename = os.path.basename(reader.file_lst[idx_doc])
+        ann_filename = os.path.join(results_dir, ann_filename)
+
+        target_file = Path(reader.file_lst[idx_doc]).stem + ".ann"
+        target_file = os.path.join(input_dir, target_file)
+
+        if os.path.exists(ann_filename):
+            doc_pred_target.append((ann_filename, target_file))
+            print(f"{ann_filename} annotation already exists. Skipping it..")
+            continue
+
         text_ = ""
         with open(reader.file_lst[idx_doc], "r") as fd:
             text_ = fd.read()
 
         narrative_doc = t2s.Narrative(language, text_, "2020-10-11")
 
-
         # extract the element in the given tool
         for el in narrative_elements:
             print("%s extracting from file %s" % (narrative_elements[el], reader.file_lst[idx_doc]))
             extract_element(narrative_doc, el, narrative_elements[el])
 
-        ann_filename = os.path.basename(reader.file_lst[idx_doc])
-        ann_filename = os.path.join(results_dir, ann_filename)
-
         iso_str = narrative_doc.ISO_annotation()
         with open(ann_filename, "w") as fd:
             fd.write(iso_str)
-
-        target_file = Path(reader.file_lst[idx_doc]).stem + ".ann"
-        target_file = os.path.join(input_dir, target_file)
 
         doc_pred_target.append((ann_filename, target_file))
 
     return doc_pred_target
 
 
-def process_evaluation(narrative_elements, doc_lst, merge_entities=True):
+def process_evaluation(narrative_elements, doc_lst):
     """
     Process evaluation for a given element (time, actors or event), in a
     given tool (spacy, spacy, py_heideltime, custompt, etc).
@@ -323,26 +326,28 @@ def process_evaluation(narrative_elements, doc_lst, merge_entities=True):
     """
 
     res = {}
-    metrics = ["precision_relax","recall_relax", "f1_relax", \
-            "precision", "recall", "f1"]
+    metrics = ["precision_relax", "recall_relax", "f1_relax", \
+               "precision", "recall", "f1"]
 
     for elem in narrative_elements:
         for m in metrics:
             res[m + "_" + elem] = []
 
+    reader = read_brat.ReadBrat()
+
     for pred_file, target_file in doc_lst:
         print("Evaluating %s and %s" % (pred_file, target_file))
-        reader = read_brat.ReadBrat()
 
-        ann_pred = reader.read_annotation_file(pred_file, merge_entities)
-        ann_target = reader.read_annotation_file(target_file, merge_entities)
+
+        ann_pred = reader.read_annotation_file(pred_file, merge_entities=True)
+        ann_target = reader.read_annotation_file(target_file, merge_entities=False)
 
         for elem in narrative_elements:
             pred, target = get_element(elem, ann_pred, ann_target)
 
             # TODO: esse e so para o srlink. Depois posso querer
             # fazer a divisao por tipos
-            #if len(pred) > 0 and len(target) > 0 and \
+            # if len(pred) > 0 and len(target) > 0 and \
             #        type(pred[0]) == type(tuple()):
             #    pred = functools.reduce(lambda x,y:x+y,\
             #            [score for (type_pred, score) in pred])
@@ -351,7 +356,7 @@ def process_evaluation(narrative_elements, doc_lst, merge_entities=True):
 
             try:
                 precision_relax, recall_relax, f1_relax = compute_relax_scores(elem, pred, target)
-                precision, recall, f1  = compute_strict_scores(elem, pred, target)
+                precision, recall, f1 = compute_strict_scores(elem, pred, target)
 
                 res["precision_relax_" + elem].append(precision_relax)
                 res["recall_relax_" + elem].append(recall_relax)
@@ -362,16 +367,16 @@ def process_evaluation(narrative_elements, doc_lst, merge_entities=True):
                 res["f1_" + elem].append(f1)
             except:
                 e = sys.exc_info()[0]
-                with open("log_evaluation","a") as fd_log:
+                with open("log_evaluation", "a") as fd_log:
                     now = datetime.now()
                     time_str = now.strftime("%m/%d/%Y, %H:%M:%S")
-                    fd_log.write( "[%s] <p>Error: %s</p>\n" % (time_str, e))
+                    fd_log.write("[%s] <p>Error: %s</p>\n" % (time_str, e))
                 print("Warning: Some error computing score of %s file" % pred_file)
 
     return res
 
 
-def build_evaluation(narrative_elements, language, data_dir: str, results_dir: str):
+def build_evaluation(narrative_elements, language, data_dir: str, results_dir: str, split=None):
     """
     Process the evaluation of DATA_DIR (enviroment variable) and put
     the extracted elements in the RESULTS_DIR (enviroment variable)
@@ -384,9 +389,8 @@ def build_evaluation(narrative_elements, language, data_dir: str, results_dir: s
     @return None
     """
 
-    doc_pred_lst = prediction(data_dir, results_dir, narrative_elements, language)
+    doc_pred_lst = prediction(data_dir, results_dir, narrative_elements, language, split)
     return process_evaluation(narrative_elements, doc_pred_lst)
-
 
 
 def print_metrics_result(res: dict):
@@ -395,6 +399,7 @@ def print_metrics_result(res: dict):
     for key_tool in res.keys():
         avg_value = calculate_average_result(res[key_tool])
         print(f"Average Value for Metric {key_tool} is: {avg_value}")
+
 
 def write_metrics_result(res, fd):
     fd.write(f"\n-------Metrics Results-------\n")
@@ -414,7 +419,6 @@ def calculate_average_result(result) -> float:
 
 
 def main(narrative_elements: dict, language: str, data_dir: str = None, results_dir: str = None):
-
     start(language)
 
     res = build_evaluation(narrative_elements=narrative_elements, language=language, data_dir=data_dir,
@@ -422,20 +426,28 @@ def main(narrative_elements: dict, language: str, data_dir: str = None, results_
 
     print_metrics_result(res)
 
+
 if __name__ == "__main__":
 
     my_parser = argparse.ArgumentParser(description='Evaluation of a give dataset according to standard metrics')
 
-    my_parser.add_argument("inputdir", action='store', type=dir_path, help="The directory that contains the target files (brat format) and the txt narrative files.")
-    my_parser.add_argument("resultsdir", action='store', type=dir_path, help="The directory where are the files with the extracted entities.")
+    my_parser.add_argument("inputdir", action='store', type=dir_path,
+                           help="The directory that contains the target files (brat format) and the txt narrative files.")
+    my_parser.add_argument("resultsdir", action='store', type=dir_path,
+                           help="The directory where are the files with the extracted entities.")
 
-    my_parser.add_argument("--language", action='store', type=str, help="Current support en (English) and pt (Portuguese. Default: en.")
+    my_parser.add_argument("--language", action='store', type=str,
+                           help="Current support en (English) and pt (Portuguese. Default: en.")
 
-    my_parser.add_argument("--participant", action='store', type=str, help="The tools to extract participants from narratives. Default: spacy.")
-    my_parser.add_argument("--time", action='store', type=str, help="The tools to extract time from narratives. Default: py_heideltime.")
-    my_parser.add_argument("--event", action='store', type=str, help="The tools to extract event from narratives. Default: allennlp.")
+    my_parser.add_argument("--participant", action='store', type=str,
+                           help="The tools to extract participants from narratives. Default: spacy.")
+    my_parser.add_argument("--time", action='store', type=str,
+                           help="The tools to extract time from narratives. Default: py_heideltime.")
+    my_parser.add_argument("--event", action='store', type=str,
+                           help="The tools to extract event from narratives. Default: allennlp.")
 
-    my_parser.add_argument("--srlink", action='store', type=str, help="The tools to extract srlinks from narratives. Default: allennlp.")
+    my_parser.add_argument("--srlink", action='store', type=str,
+                           help="The tools to extract srlinks from narratives. Default: allennlp.")
 
     args = my_parser.parse_args()
 
@@ -474,14 +486,13 @@ if __name__ == "__main__":
             sys.exit()
         srlink_tool = args.srlink
 
-    narrative_elements = {"participant":participant_tool,\
-                          "time":time_tool,\
-                          "event":event_tool,\
-                          "srlink":srlink_tool}
+    narrative_elements = {"participant": participant_tool, \
+                          "time": time_tool, \
+                          "event": event_tool, \
+                          "srlink": srlink_tool}
 
-    main(narrative_elements, language,\
-            args.inputdir, args.resultsdir)
-     
-     
-     
+    main(narrative_elements, language, \
+         args.inputdir, args.resultsdir)
+
+
 

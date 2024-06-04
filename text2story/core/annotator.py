@@ -4,9 +4,9 @@
 	META-annotator
 """
 
-from text2story.annotators import ACTOR_EXTRACTION_TOOLS, TIME_EXTRACTION_TOOLS, OBJECTAL_LINKS_RESOLUTION_TOOLS
+from text2story.annotators import PARTICIPANT_EXTRACTION_TOOLS, TIME_EXTRACTION_TOOLS, OBJECTAL_LINKS_RESOLUTION_TOOLS
 from text2story.annotators import EVENT_EXTRACTION_TOOLS, SEMANTIC_ROLE_LABELLING_TOOLS
-from text2story.annotators import extract_actors, extract_times, extract_objectal_links, extract_events
+from text2story.annotators import extract_participants, extract_times, extract_objectal_links, extract_events
 from text2story.annotators import extract_semantic_role_links
 
 
@@ -22,8 +22,8 @@ class Annotator:
 
     Methods
     -------
-    extract_actors(lang, text)
-        Returns a list with the actors identified in the text.
+    extract_participants(lang, text)
+        Returns a list with the participants identified in the text.
         Each actor is represented by a tuple, consisting of the start character offset, end character offset, the POS tag and the NE IOB tag, resp.
             Example: (0, 4, 'Noun', 'Per')
         Possible POS tags: 'Noun', 'Pronoun'.
@@ -52,7 +52,7 @@ class Annotator:
         self.tools = tools
 
 
-    def extract_actors(self, lang, text):
+    def extract_participants(self, lang, text, url=None):
         """
         Parameters
         ----------
@@ -80,14 +80,18 @@ class Annotator:
 
         # If no tool specified, use all
         if nr_tools == 0:
-            self.tools = ACTOR_EXTRACTION_TOOLS
+            self.tools = PARTICIPANT_EXTRACTION_TOOLS.keys()
+
             nr_tools = len(self.tools)
 
         # Gather the annotations made by the tools specified and combine the results
         annotations = []
         idxs = []
         for tool in self.tools:
-            annotations.append(extract_actors(tool, lang, text))
+            if url is not None:
+                annotations.append(extract_participants(tool, lang, text, url))
+            else:
+                annotations.append(extract_participants(tool, lang, text))
 
         final_annotation = []
 
@@ -160,15 +164,16 @@ class Annotator:
                 continue # Discard the actor if it's lexical head isn't a 'Noun' or 'Pronoun'
 
             # For the NE, we also favor specifics NEs, in this case all labels versus the NE 'OTHER' and we take the most common.
-            rmv_other_ne = [ne for ne in actor_types if ne != 'Other']
+            rmv_other_ne = [ne for ne in actor_types if ne != 'Other' or ne != 'Arg']
             if rmv_other_ne:
                 actor_type = max(rmv_other_ne, key=rmv_other_ne.count)
             else:
                 actor_type = 'Other'
 
             # Discard entities with types other than 'Per', 'Org', 'Loc', 'Obj', 'Nat' & 'Other'.
+            # if it is Agr, it was an argument of an semantic role labeling event
             # Used, typically, to eliminate dates and durations incorrectly identified as an actor.
-            if actor_type in ['Per', 'Org', 'Loc', 'Obj', 'Nat', 'Other']:
+            if actor_type in ['Arg','Per', 'Org', 'Loc', 'Obj', 'Nat', 'Other']:
                 final_annotation.append(((actor_start_character_offset, actor_end_character_offset), actor_lexical_head, actor_type))
 
         return final_annotation
@@ -196,7 +201,7 @@ class Annotator:
 
         # If no tool specified, use all
         if nr_tools == 0:
-            self.tools = TIME_EXTRACTION_TOOLS
+            self.tools = list(TIME_EXTRACTION_TOOLS.keys())
             nr_tools = len(self.tools)
 
         # NOTE: The extraction is done with only one tool, so the result in just the extraction done by the tool
@@ -215,7 +220,7 @@ class Annotator:
         nr_tools = len(self.tools)
 
         if nr_tools == 0:
-            self.tools = EVENT_EXTRACTION_TOOLS
+            self.tools = list(EVENT_EXTRACTION_TOOLS.keys())
             nr_tools = len(self.tools)
 
         events = extract_events(self.tools[0], lang, text)
@@ -242,7 +247,7 @@ class Annotator:
 
         # If no tool specified, use all
         if nr_tools == 0:
-            self.tools = OBJECTAL_LINKS_RESOLUTION_TOOLS
+            self.tools = list(OBJECTAL_LINKS_RESOLUTION_TOOLS.keys())
             nr_tools = len(self.tools)
 
         # NOTE: The extraction is done with only one tool, so the result in just the extraction done by the tool
@@ -261,8 +266,9 @@ class Annotator:
 
         # If no tool specified, use all
         if nr_tools == 0:
-            self.tools = SEMANTIC_ROLE_LABELLING_TOOLS
+            self.tools = list(SEMANTIC_ROLE_LABELLING_TOOLS.keys())
             nr_tools = len(self.tools)
 
         srl_by_sentence = extract_semantic_role_links(self.tools[0], lang, text)
+
         return srl_by_sentence
