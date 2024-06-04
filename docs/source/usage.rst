@@ -42,24 +42,14 @@ annotations, if they exists. This is also a class defined in readers module.
 
 Next, a code example to read a directory with annotations in BRAT format.
 
-.. literalinclude:: examples/read_brat_dir
+.. literalinclude:: examples/read_brat_dir.py
   :language: python
 
 
 The next code illustrate how to use `ReadBrat` to read only one file.
 
-.. code-block:: python
-    from text2story.readers.read_brat import ReadBrat
-    reader = ReadBrat()
-
-    # in the BRAT file format, you have a txt file and a corresponding ann file,
-    # both have the same name. For instance, in this example, data/doc1.txt is the
-    # raw text file, and data/doc1.ann contains the annotations. But we only provide the
-    # name without to specify the extension.
-    doc = reader.process_file("data/doc1")
-    for tok in doc:
-        print(tok.text)
-
+.. literalinclude:: examples/read_brat_file.py
+  :language: python
 
 
 The Annotators Module
@@ -71,9 +61,9 @@ are all naturally integrated in our pipeline. The second type is composed by ann
 anyone can built and integrate in our pipeline. For both, it is required to load the models for the
 language of the used examples. The code bellow is used to load the models for the English language.
 
-.. code-block:: python
-    import text2story as t2s
-    t2s.start('en')
+.. literalinclude:: examples/load_models.py
+  :language: python
+
 
 .. note::
 
@@ -98,13 +88,8 @@ participants using the NLTK module. Others modules that employs NER to identify 
 (en_core_web_lg/'en', pt_core_news_lg/'pt') and BERTNERPT (https://huggingface.co/arubenruben/NER-PT-BERT-CRF-Conll2003).
 Bellow, an example of using only NLTK to extract participants from a narrative.
 
-.. code-block:: python
-    import text2story as t2s
-    text = 'The king died in battle. The queen married his brother.'
-    my_narrative = t2s.Narrative('en', text, '2024')
-    my_narrative.extract_participants('nltk')
-
-    print(my_narrative.participants)
+.. literalinclude:: examples/extract_participants_en.py
+  :language: python
 
 The ALLENNLP ('en') and SRL('pt') modules employ Semantic Role Labeling modules to identify participants and the
 code for them is the same as above, only changing the name of the module.
@@ -112,13 +97,9 @@ code for them is the same as above, only changing the name of the module.
 It is also possible to use pipeline models to obtain better or different results. The code below extracts
 participants from a narrative text in Portuguese using SPACY and SRL modules.
 
-.. code-block:: python
-    import text2story as t2s
-    text = 'O rei morreu na batalha. A rainha casou com seu irmão.'
-    my_narrative = t2s.Narrative('pt', text, '2024')
-    my_narrative.extract_participants('srl','spacy')
+.. literalinclude:: examples/extract_participants_pt.py
+  :language: python
 
-    print(my_narrative.participants)
 
 
 Time
@@ -128,13 +109,8 @@ For time expression, text2story has py_heideltime and tei2go to identify time ex
 English languages. The code is similar to the extraction of participants. See the example bellow:
 
 
-.. code-block:: python
-    import text2story as t2s
-    text = 'The traveling salesman went town to town. However, he did not sell one book.'
-    my_narrative = t2s.Narrative('en', text, '2024')
-    my_narrative.extract_times('py_heideltime')
-
-    print(my_narrative.times)
+.. literalinclude:: examples/extract_time.py
+  :language: python
 
 
 
@@ -144,13 +120,8 @@ Events
 There are only two modules devoted to the extraction of events, ALLENNLP ('en') and SRL ('pt'). The extraction of
 events is done in the same way as the extraction of time and participants. See the code below.
 
-.. code-block:: python
-    import text2story as t2s
-    text = 'O rei morreu na batalha. A rainha casou com seu irmão.'
-    my_narrative = t2s.Narrative('pt', text, '2024')
-    my_narrative.extract_events('srl')
-
-    print(my_narrative.events)
+.. literalinclude:: examples/extract_events.py
+  :language: python
 
 Semantic Links
 ''''''''
@@ -158,16 +129,8 @@ Semantic Links
 Semantic links can only be extracted after the extraction of events, participants, and time. So, the code below
 updates the example code from the extraction of events.
 
-.. code-block:: python
-    import text2story as t2s
-    text = 'O rei morreu na batalha. A rainha casou com seu irmão.'
-    my_narrative = t2s.Narrative('pt', text, '2024')
-
-    my_narrative.extract_events('srl')
-    my_narrative.extract_participants('spacy','srl')
-    my_narrative.extract_times('py_heideltime')
-
-    my_narrative.extract_semantic_role_links('srl')
+.. literalinclude:: examples/extract_semantic_links.py
+  :language: python
 
 
 Custom Annotators
@@ -178,29 +141,21 @@ load function. The main goal of this method is to load the models used in its pi
 following implementation of a custom annotator that uses tei2go French model to extract time expressions, and
 the spacy NER French model to extract participants.
 
-.. literalinclude:: custom_annotator.py
+.. literalinclude:: examples/custom_annotator.py
   :language: python
 
 To use your new annotator, first, you need to add it to the text2story pipeline using the following code.
 
-.. code-block:: python
-    import text2story as t2s
-
-    t2s.add_annotator("custom_annotator", ['fr'], ['participant', 'time'])
+.. literalinclude:: examples/add_custom_annotator.py
+  :language: python
 
 Then, you can use the annotator like the native ones. See the code below.
 
-.. code-block:: python
-    import text2story as t2s
-
-    t2s.start("fr")
-    text_ = "Que retenir de la visite d'État d'Emmanuel Macron en Allemagne?"
-    my_narrative = t2s.Narrative('fr',text_,"2024")
-
-    my_narrative.extract_participants("custom_annotator")
-
-    print(my_narrative.participants)
+.. literalinclude:: examples/test_custom_annotator.py
+  :language: python
 
 .. The Visualization Module
 .. -----
+
+
 
