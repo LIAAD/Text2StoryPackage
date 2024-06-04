@@ -248,8 +248,10 @@ rpds-py==0.18.1
     #   referencing
 safetensors==0.3.3
     # via transformers
-scipy==1.11.2
-    # via netgraph
+scipy==1.10.0
+    # via
+    #   netgraph
+    #   text2story (pyproject.toml)
 six==1.16.0
     # via python-dateutil
 smart-open==6.3.0
