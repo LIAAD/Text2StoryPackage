@@ -11,13 +11,15 @@ from types import ModuleType
 
 from collections import ChainMap
 
-sys.path.insert(0, Path(__file__).parent)
+sys.path.insert(0, str(Path(__file__).parent))
 
-PARTICIPANT_EXTRACTION_TOOLS = {'spacy':['pt','en'], 'nltk':['en'], 'allennlp':['en'],'bertnerpt':['pt'], 'dbpedia':['pt','en'],'srl':['pt']}
-TIME_EXTRACTION_TOOLS = {'py_heideltime':['pt','en'], 'tei2go':['pt','en','it','de','es','fr']}
-EVENT_EXTRACTION_TOOLS = {'allennlp':['en'],"srl":["pt"]}
-OBJECTAL_LINKS_RESOLUTION_TOOLS = {'allennlp':['en']}
-SEMANTIC_ROLE_LABELLING_TOOLS = {'allennlp':['en'],"srl":["pt"]}
+PARTICIPANT_EXTRACTION_TOOLS = {'spacy':['pt','en'], 'nltk':['en'], 'bertnerpt':['pt'], 'dbpedia':['pt','en'],'srl':['pt','en']}
+#TIME_EXTRACTION_TOOLS = {'py_heideltime':['pt','en'], 'tei2go':['pt','en','it','de','es','fr']}
+TIME_EXTRACTION_TOOLS = {'py_heideltime':['pt','en']}
+EVENT_EXTRACTION_TOOLS = {"srl":["pt","en"]}
+#OBJECTAL_LINKS_RESOLUTION_TOOLS = {'allennlp':['en']}
+OBJECTAL_LINKS_RESOLUTION_TOOLS = {}
+SEMANTIC_ROLE_LABELLING_TOOLS = {"srl":["pt","en"]}
 
 LOCAL_ANNOTATORS = set()
 
@@ -100,15 +102,12 @@ def load(lang, tools=None):
     if lang in tools["py_heideltime"] and "py_heideltime" in tools:
         from text2story.annotators import PY_HEIDELTIME
         PY_HEIDELTIME.load(lang)
-    if lang in tools["allennlp"] and "allennlp" in tools:
-        from text2story.annotators import ALLENNLP
-        ALLENNLP.load(lang)
     if lang in tools["bertnerpt"] and "bertnerpt" in tools:
         from text2story.annotators import BERTNERPT
         BERTNERPT.load(lang)
-    if lang in tools["tei2go"]  and "tei2go" in tools:
-        from text2story.annotators import TEI2GO
-        TEI2GO.load(lang)
+    #if lang in tools["tei2go"]  and "tei2go" in tools:
+    #    from text2story.annotators import TEI2GO
+    #    TEI2GO.load(lang)
     if lang in tools["dbpedia"]  and "dbpedia" in tools:
         from text2story.annotators import DBPEDIA
         DBPEDIA.load(lang)
@@ -147,9 +146,6 @@ def extract_participants(tool, lang, text, url=None):
     elif tool == 'nltk' and lang == "en":
         from text2story.annotators import NLTK
         return NLTK.extract_participants(lang, text)
-    elif tool == 'allennlp':
-        from text2story.annotators import ALLENNLP
-        return ALLENNLP.extract_participants(lang, text)
     elif tool == 'bertnerpt':
         from text2story.annotators import BERTNERPT
         return BERTNERPT.extract_participants(lang, text)
@@ -185,10 +181,6 @@ def extract_objectal_links(tool, lang, text):
         local_annotator = importlib.import_module(tool)
         return local_annotator.extract_objectal_links(lang, text)
 
-    if tool == 'allennlp':
-        from text2story.annotators import ALLENNLP
-        olink_lst =  ALLENNLP.extract_objectal_links(lang, text)
-        return olink_lst
 
     raise InvalidTool
 
@@ -198,9 +190,6 @@ def extract_events(tool, lang, text):
         local_annotator = importlib.import_module(tool)
         return local_annotator.extract_events(lang, text)
 
-    if tool == 'allennlp':
-        from text2story.annotators import ALLENNLP
-        return ALLENNLP.extract_events(lang, text)
     if tool == 'custompt':
         from text2story.annotators import CUSTOMPT
         return CUSTOMPT.extract_events(lang, text)
@@ -217,9 +206,6 @@ def extract_semantic_role_links(tool, lang, text):
         local_annotator = importlib.import_module(tool)
         return local_annotator.extract_semantic_role_links(lang, text)
 
-    if tool == 'allennlp':
-        from text2story.annotators import ALLENNLP
-        return ALLENNLP.extract_semantic_role_links(lang, text)
     if tool == 'srl':
         from text2story.annotators import SRL
         return SRL.extract_semantic_role_links(lang, text)
