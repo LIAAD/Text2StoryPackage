@@ -290,14 +290,17 @@ class ReadBrat(read.Read):
 
         ann = {"Event": [], "Actor": [], "Time": [], "TIME_X3": [], \
                 "ACTOR": [], "Participant": [],"SRLINK":[],"OLINK":[],"TLINK":[]}
+        ann_ref = {}  # annotation by reference
+        # the pattern of a reference for an argument of a relation
+        ARG_REL = re.compile("T\d+")
 
         with open(file_ann, "r") as fd:
             last_line_type = None
             for line in fd:
                 ann_type = None
+                line_toks = line.split()
                 if line[0] != '#':
 
-                    line_toks = line.split()
                     if len(line_toks) < 3:
                         if line[0] != 'T' and line[0] != 'A' and line[0] != 'R' and last_line_type in ann.keys():
                             ann[last_line_type][-1]["value"] += " " + line.strip()
@@ -364,16 +367,33 @@ class ReadBrat(read.Read):
                         else:
                             self.ann_ref[ann_type] = {e1: [e2]}
 
-                    elif line[0] == 'A': # for now ignore attributes
+                    elif line[0] == 'A':
 
                         ref = line_toks[2]
-                        attr_name = line_toks[1]
-                        attr_value = line_toks[3]
+                        if ref in ann_ref:
+                            # ann_ref[ref][1].append((line[1], line[3]))
+                            if len(line_toks) > 3:
+                                ann_ref[ref][line_toks[1]] = line_toks[3]
+                            else:
+                                ann_ref[ref][line_toks[1]] = line_toks[1]
 
-                        if ann_type in self.ann_ref:
-                            self.ann_ref[ann_type][ref] = attr_value
                         else:
-                            self.ann_ref[ann_type] = {ref:attr_value}
+                            ann_ref[ref] = {line_toks[1]: line_toks[3]}
+                    elif line[0] == '#':
+                            # it is a note about the annotation,
+                            # insert it as an attribute
+                            ann_type = line_toks[1]
+                            ref = line_toks[2]
+                            ann_info = " ".join(line_toks[3:])
+
+                            if ref in ann_ref:
+                                if ann_type in ann_ref[ref]:
+                                    ann_ref[ref][ann_type].append(ann_info)
+                                else:
+                                    ann_ref[ref][ann_type] = [ann_info]
+                            else:
+                                ann_ref[ref] = {ann_type: [ann_info]}
+
         if merge_entities:
             return self.merge_entity_span(ann)
         else:
@@ -410,7 +430,7 @@ class ReadBrat(read.Read):
                         continue
                  
                     fullname = os.path.join(data_dir, p.stem)
-                    #print("-->", fullname)
+                    # print("-->", fullname)
                     token_lst = self.process_file(fullname)
                     self.file_lst.append(fullname + ".txt")
 
@@ -467,16 +487,16 @@ class ReadBrat(read.Read):
             #print("-->",clause_id, sent_id)
 
 
-            ans = self.search_all_idx(tok.idx, ann_idx)
+            ans = self.search_all_idx(tok.idx, tok.idx + len(tok.text), ann_idx)
 
             # TODO: it is necessary perform a more efficient search
             # a possible subtoken annotation
             # perform more than one search, and build a list of id's
-
-            ans_sub = self.search_subtoken(tok.idx, tok.idx + len(tok.text), \
+            if len(tok.text.strip()) != 0 and tok.text not in ".!?-,":
+                ans_sub = self.search_subtoken(tok.idx, tok.idx + len(tok.text) - 1, \
                         ann_idx)
 
-            ans = ans.union(ans_sub)
+                ans = ans.union(ans_sub)
 
             if len(ans) != 0:
                 # annotations in token
@@ -492,7 +512,8 @@ class ReadBrat(read.Read):
 
                     for ref, ann_type, elems in ann[(t0, t1)]:
 
-                        mytok.attr.append((ann_type, ann_ref[ref]))
+                        mytok.attr.append((ann_type,ann_ref[ref]))
+                        mytok.ann_offset.append((t0,t1))
                         mytok.id_ann.append(ref) 
                         # all the annotations ids that a token can be assigned
                         ref_lst_tok.add(ref)
@@ -626,6 +647,20 @@ class ReadBrat(read.Read):
 
                     else:
                         ann_ref[ref] = {line_toks[1]:line_toks[3]}
+                elif line[0] == '#':
+                    # it is a note about the annotation,
+                    # insert it as an attribute
+                    ann_type = line_toks[1]
+                    ref = line_toks[2]
+                    ann_info = " ".join(line_toks[3:])
+
+                    if ref in ann_ref:
+                        if ann_type in ann_ref[ref]:
+                            ann_ref[ref][ann_type].append(ann_info)
+                        else:
+                            ann_ref[ref][ann_type] = [ann_info]
+                    else:
+                        ann_ref[ref] = {ann_type: [ann_info]}
 
         idx_lst = ann.keys()
 
@@ -638,7 +673,7 @@ class ReadBrat(read.Read):
 
         with open(file_txt, "r") as fd:
 
-            doc = self.nlp(fd.read())
+            doc = self.nlp(fd.read().strip())
             token_lst, ref2tok = self.extract_token_corpus(doc, idx_lst, ann, ann_ref)
 
         # update relation field for each token
@@ -662,7 +697,7 @@ class ReadBrat(read.Read):
 
         return token_lst
 
-    def search_all_idx(self, idx, idx_lst):
+    def search_all_idx(self, idx, idx_end, idx_lst):
         """
         Since a token can be annotated with multiple id's, it is necessary 
         to perform multiple search for each one of these id's.
@@ -696,7 +731,8 @@ class ReadBrat(read.Read):
 
         for pos, (start, end) in enumerate(idx_lst):
             
-            if start >= tok_start and end <= tok_end:
+            #if start >= tok_start and end <= tok_end:
+            if not (tok_end < start or tok_start > end):
                 ans.add(pos)
 
         return ans

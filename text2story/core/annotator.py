@@ -173,7 +173,7 @@ class Annotator:
             # Discard entities with types other than 'Per', 'Org', 'Loc', 'Obj', 'Nat' & 'Other'.
             # if it is Agr, it was an argument of an semantic role labeling event
             # Used, typically, to eliminate dates and durations incorrectly identified as an actor.
-            if actor_type in ['Arg','Per', 'Org', 'Loc', 'Obj', 'Nat', 'Other']:
+            if actor_type.lower() in ['arg','per', 'org', 'loc', 'obj', 'nat', 'other','person','gpe']:
                 final_annotation.append(((actor_start_character_offset, actor_end_character_offset), actor_lexical_head, actor_type))
 
         return final_annotation

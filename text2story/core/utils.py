@@ -359,3 +359,77 @@ def find_substring_match(matches, position):
         # Check if the matched substring is within the desired range (starting from x)
         if start_pos >= position:
             return start_pos
+
+def update_offsets(old_text, new_text, annotation_file):
+    """
+    Update character offsets in annotation file based on new text positions.
+
+    Args:
+        old_text (str): Original text content
+        new_text (str): Modified text content
+        annotation_file (str): Content of the annotation file
+
+    Returns:
+        str: Updated annotation file content
+    """
+    # Read annotations line by line
+    updated_annotations = []
+    annotations = annotation_file.strip().split('\n')
+
+    # Create a mapping of old expressions to their new positions
+    expression_mapping = {}
+
+    for line in annotations:
+        parts = line.split()
+        if len(parts) >= 4 and parts[0].startswith('T'):  # Only process T lines
+            # Extract the expression from old text using offsets
+            start, end = int(parts[2]), int(parts[3])
+            expression = old_text[start:end].strip()
+
+            # Find new position of expression in new text
+            # Start searching from beginning to maintain order
+            search_start = 0
+            while True:
+                new_start = new_text.find(expression, search_start)
+                if new_start == -1:
+                    break
+
+                # Check if this position maintains relative ordering
+                valid_position = True
+                for old_expr, (prev_start, _) in expression_mapping.items():
+                    old_pos = old_text.find(old_expr)
+                    if (old_pos < start and new_start < prev_start) or \
+                            (old_pos > start and new_start > prev_start):
+                        continue
+                    valid_position = False
+                    break
+
+                if valid_position:
+                    new_end = new_start + len(expression)
+                    expression_mapping[expression] = (new_start, new_end)
+                    break
+                search_start = new_start + 1
+
+    # Update annotations with new offsets
+    for line in annotations:
+        parts = line.split()
+        if len(parts) >= 4 and parts[0].startswith('T'):
+            # Extract the expression from old text
+            start, end = int(parts[2]), int(parts[3])
+            expression = old_text[start:end].strip()
+
+            if expression in expression_mapping:
+                new_start, new_end = expression_mapping[expression]
+                # Replace old offsets with new ones
+                parts[2] = str(new_start)
+                parts[3] = str(new_end)
+
+                updated_line = parts[0] + '\t' + ' '.join(parts[1:4]) + '\t' + ' '.join(parts[4:])
+            else:
+                updated_line = line  # Keep original if expression not found
+        else:
+            updated_line = line  # Keep non-T lines unchanged
+
+        updated_annotations.append(updated_line)
+
+    return '\n'.join(updated_annotations)

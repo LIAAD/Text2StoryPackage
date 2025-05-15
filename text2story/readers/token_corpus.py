@@ -24,6 +24,7 @@ class TokenCorpus:
 
         self.offset = None
         self.attr = []
+        self.ann_offset = []
 
         # a token can be annotated by more than one 
         # layer, therefore it can present more than one 

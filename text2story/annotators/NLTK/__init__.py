@@ -19,6 +19,9 @@ def load(lang):
     """
     if lang == "en":
         nltk.download("maxent_ne_chunker")
+        nltk.download('maxent_ne_chunker_tab')
+
+        nltk.download('averaged_perceptron_tagger_eng')
         nltk.download("words")
 
 
