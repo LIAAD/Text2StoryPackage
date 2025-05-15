@@ -2,7 +2,7 @@
 from typing import List, Dict, Tuple
 
 from text2story.readers.token_corpus import TokenCorpus
-
+from text2story.core.utils import join_tokens
 
 def select_sentences(doc:List[TokenCorpus]) -> List[Tuple[int,List[TokenCorpus]]]:
     """
@@ -28,6 +28,7 @@ def select_sentences(doc:List[TokenCorpus]) -> List[Tuple[int,List[TokenCorpus]]
             current_sent_id = tok.sent_id
 
     sentences.append((current_sent_id, current_sent))
+
 
     return sentences
 
@@ -64,7 +65,9 @@ def select_sentences_ann(sent_lst:List[Tuple[int,List[TokenCorpus]]], narrative_
                         else:
                             sent_id_lst.add(sent_id)
     ans = []
-    for sent_id in sent_id_lst:
-        ans.append(sent_lst[sent_id])
+
+    for (sent_id, sent) in sent_lst:
+        if sent_id in sent_id_lst:
+            ans.append((sent_id, sent))
 
     return ans
