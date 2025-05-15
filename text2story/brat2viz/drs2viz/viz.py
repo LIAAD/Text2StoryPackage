@@ -84,7 +84,9 @@ def create_plantuml(actors_dict, events_dict, events_relations, non_event_relati
 
 def build_graph(actors_dict, events_dict, events_relations, non_event_relations):
 
-    G = nx.MultiDiGraph()
+    #G = nx.MultiDiGraph()
+    G = nx.DiGraph()
+
     labels = {}
     key2labels = {}
     for e in events_relations:

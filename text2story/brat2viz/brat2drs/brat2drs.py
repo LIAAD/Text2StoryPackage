@@ -14,7 +14,7 @@ from pathlib import Path
 from nltk.sem import logic
 from nltk.inference import TableauProver
 from nltk.sem.drt import *
-
+from text2story.brat2viz.brat import file_parser
 # %%
 
 dexpr = DrtExpression.fromstring
@@ -43,52 +43,6 @@ def read_file(filename):
     content = [x.strip().replace('\t', ' ') for x in content]
     return content
 
-
-def file_parser(filecontent):
-    ann_dict = []
-
-    for x in filecontent:
-
-        tmp = x.split()
-        ann = {}
-        if x[0] == 'E':
-            ann = {'ann_type': 'TextBound', 'tag_id': tmp[0], 'tag': tmp[1].split(
-                ':')[0], 'tag_ref': tmp[1].split(':')[1]}
-        elif x[0] == 'A':
-            ann = {'ann_type': 'Attribute',
-                   'tag_id': tmp[0], 'attr_type': tmp[1], 'tag_ref': tmp[2], 'value': ' '.join(tmp[3:])}
-        elif x[0] == 'T':
-
-            if tmp[1] == "Participant":
-                if ';' in tmp[3]:
-                    ann = {'ann_type': 'TextBound', 'tag_id': tmp[0], 'attribute': tmp[1],
-                           's_pos': tmp[2], 'f_pos': tmp[4], 'value': ' '.join(tmp[5:])}
-                else:
-                    ann = {'ann_type': 'TextBound', 'tag_id': tmp[0], 'attribute': tmp[1], \
-                            'tag_ref': tmp[2], 'value': ' '.join(tmp[4:])}
-            elif tmp[1] == "Event":
-                if ';' in tmp[3]:
-                    ann = {'ann_type': 'TextBound', 'tag_id': tmp[0], 'attribute': tmp[1],
-                           's_pos': tmp[2], 'f_pos': tmp[4], 'value': ' '.join(tmp[5:]),\
-                                   'tag_ref':tmp[1][0]}
-                else:
-                    ann = {'ann_type': 'TextBound', 'tag_id': tmp[0], 'attribute':tmp[1],\
-                            'tag': tmp[1].split(':')[0],'value': ' '.join(tmp[4:]),\
-                            'tag_ref':tmp[1][0]}
-            else:
-                ann = {'ann_type': 'TextBound', 'tag_id': tmp[0], 'attribute': tmp[1].split(
-                        ':')[0],'value': ' '.join(tmp[4:])}
-        elif x[0] == 'R':
-            ann = {'ann_type': 'Relation', 'tag_id': tmp[0], 'rel_type': tmp[1], 'tag_ref1': tmp[2].split(':')[1],
-                   'tag_ref2': tmp[3].split(':')[1]}
-        elif x[0] == '#':
-            ann = {'ann_type': 'Note',
-                   'tag_id': tmp[0], 'tag_ref': tmp[1], 'note': ' '.join(tmp[2:])}
-
-        if ann != {}:
-            ann_dict.append(ann)
-
-    return ann_dict
 
 
 # assign a variable for each event
@@ -500,7 +454,7 @@ def main(ann_dir):
         # break
 
 
-#if __name__ == "__main__":
-#    main(ANN_DIR)
+if __name__ == "__main__":
+    main(ANN_DIR)
 
 # %%
