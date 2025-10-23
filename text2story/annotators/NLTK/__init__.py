@@ -22,6 +22,7 @@ def load(lang):
         nltk.download('maxent_ne_chunker_tab')
 
         nltk.download('averaged_perceptron_tagger_eng')
+        nltk.download('averaged_perceptron_tagger')
         nltk.download("words")
 
 

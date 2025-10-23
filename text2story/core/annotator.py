@@ -80,7 +80,11 @@ class Annotator:
 
         # If no tool specified, use all
         if nr_tools == 0:
-            self.tools = PARTICIPANT_EXTRACTION_TOOLS.keys()
+            PARTICIPANT_EXTRACTION_TOOLS_LANG = []
+            for key in PARTICIPANT_EXTRACTION_TOOLS:
+                if lang in PARTICIPANT_EXTRACTION_TOOLS[key]:
+                    PARTICIPANT_EXTRACTION_TOOLS_LANG.append(key)
+            self.tools = PARTICIPANT_EXTRACTION_TOOLS_LANG
 
             nr_tools = len(self.tools)
 
@@ -201,7 +205,11 @@ class Annotator:
 
         # If no tool specified, use all
         if nr_tools == 0:
-            self.tools = list(TIME_EXTRACTION_TOOLS.keys())
+            TIME_EXTRACTION_TOOLS_LANG = []
+            for key in TIME_EXTRACTION_TOOLS:
+                if lang in TIME_EXTRACTION_TOOLS[key]:
+                    TIME_EXTRACTION_TOOLS_LANG.append(key)
+            self.tools = TIME_EXTRACTION_TOOLS_LANG
             nr_tools = len(self.tools)
 
         # NOTE: The extraction is done with only one tool, so the result in just the extraction done by the tool
@@ -220,7 +228,11 @@ class Annotator:
         nr_tools = len(self.tools)
 
         if nr_tools == 0:
-            self.tools = list(EVENT_EXTRACTION_TOOLS.keys())
+            EVENT_EXTRACTION_TOOLS_LANG = []
+            for key in EVENT_EXTRACTION_TOOLS:
+                if lang in EVENT_EXTRACTION_TOOLS[key]:
+                    EVENT_EXTRACTION_TOOLS_LANG.append(key)
+            self.tools = EVENT_EXTRACTION_TOOLS_LANG
             nr_tools = len(self.tools)
 
         events = extract_events(self.tools[0], lang, text)
@@ -247,7 +259,11 @@ class Annotator:
 
         # If no tool specified, use all
         if nr_tools == 0:
-            self.tools = list(OBJECTAL_LINKS_RESOLUTION_TOOLS.keys())
+            OBJECTAL_LINKS_RESOLUTION_TOOLS_LANG = []
+            for key in OBJECTAL_LINKS_RESOLUTION_TOOLS:
+                if lang in OBJECTAL_LINKS_RESOLUTION_TOOLS[key]:
+                    OBJECTAL_LINKS_RESOLUTION_TOOLS_LANG.append(key)
+            self.tools = OBJECTAL_LINKS_RESOLUTION_TOOLS_LANG
             nr_tools = len(self.tools)
 
         # NOTE: The extraction is done with only one tool, so the result in just the extraction done by the tool
@@ -266,7 +282,11 @@ class Annotator:
 
         # If no tool specified, use all
         if nr_tools == 0:
-            self.tools = list(SEMANTIC_ROLE_LABELLING_TOOLS.keys())
+            SEMANTIC_ROLE_LABELLING_TOOLS_LANG = []
+            for key in SEMANTIC_ROLE_LABELLING_TOOLS:
+                if lang in SEMANTIC_ROLE_LABELLING_TOOLS[key]:
+                    SEMANTIC_ROLE_LABELLING_TOOLS_LANG.append(key)
+            self.tools = SEMANTIC_ROLE_LABELLING_TOOLS_LANG
             nr_tools = len(self.tools)
 
         srl_by_sentence = extract_semantic_role_links(self.tools[0], lang, text)

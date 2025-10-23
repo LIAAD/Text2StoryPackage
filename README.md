@@ -1,7 +1,16 @@
-# Text2Story main package
-The Text2Story main package contains the main classes and methods for the T2S pipeline: from text to formal representation to visualization or other representation.
+<p align="center">
+<img src="text2story/img/story.png" width="48" style="vertical-align: middle;">
+</p>
+
+# **The text2story package**
+
+
+
+The text2story main package contains the main classes and methods for the T2S pipeline: from text to formal representation to visualization or other representation.
+
 
 - **Relation to Brat2Viz**
+
 The Text2Story package is a generalization of Brat2Viz and should in fact contain all the funcionalities and variants of the T2S project output.
 
 ## Table of Contents
@@ -51,14 +60,13 @@ doc = t2s.Narrative('en', text, '2020-05-30')
 
 doc.extract_participants() # Extraction done with all tools.
 doc.extract_participants('spacy', 'nltk') # Extraction done with the SPACY and NLTK tools.
-doc.extract_participants('allennlp') # Extraction done with just the ALLENNLP tool.
+doc.extract_participants('srl') # Extraction done with just the SRL tool.
 
 doc.extract_times() # Extraction done with all tools 
 
-doc.extract_objectal_links() # Extraction of objectal links from the text with all tools (needs to be done after extracting participants, since it requires participants to make the co-reference resolution)
-
 doc.extract_events() # Extraction of events with all tools
 doc.extract_semantic_role_link() # Extraction of semantic role links with all tools (should be done after extracting events since most semantic relations are between an participant and an event)
+doc.extract_objectal_links()# Extraction of objectal links with all tools (should be done after extracting participants because objectal links are between participants)
 
 ann_str = doc.ISO_annotation() # Outputs ISO annotation in .ann format (txt) in a file called 'annotations.ann'
 with open('annotations.ann', "w") as fd:
@@ -92,9 +100,10 @@ with open('annotations.ann', "w") as fd:
       |   |   NLTK
       |   │   PY_HEIDELTIME
       |   |   BERTNERPT
-      |   |   TEI2GO (requires the manual installation for each used model)
+      |   |   MAVERICK
+      |   |   DBPEDIA
       |   |   SPACY
-      |   |   ALLENNLP
+      |   |   SRL
       └───experiments
       |   |   evaluation.py (it performs batch evaluation of narrative corpora)
       |   |   metrics.py (it implements some specific metrics, like relaxed recall and relaxed precision)
@@ -118,13 +127,15 @@ with open('annotations.ann', "w") as fd:
 All annotators have the same interface: they implement a function called 'extract_' followed by the name of the particular extraction.
 E.g., if they are extracting participants, then they implement a function named 'extract_participants', with two arguments: the language of text and the text itself.
 
-| Extractions  |           Interface                                      | Supporting tools                                                             |
-|--------------|             ---                                          |------------------------------------------------------------------------------|
-| Participant  | extract_participants(lang, text)                         | SPACY,  NLTK , ALLENNLP, BERTNERPT                                           |
-| Timexs       | extract_timexs(lang, text, publication_time)             | PY_HEIDELTIME, TEI2GO (requires the manual installation for each used model) |
-| ObjectalLink | extract_objectal_links(lang, text, publication_time)     | ALLENNLP                                                                     |
-| Event        | extract_events(lang, text, publication_time)             | ALLENNLP                                                                     |
-| SemanticLink | extract_semantic_role_link(lang, text, publication_time) | ALLENNLP                                                                     |
+| Extractions  | Interface                                                   | Supporting tools              |
+|--------------|-------------------------------------------------------------|-------------------------------|
+| Participant  | extract_participants(lang, text, url(optional for DBPedia)) | SPACY,  NLTK , SRL, BERTNERPT |
+| Timexs       | extract_timexs(lang, text, publication_time)                | PY_HEIDELTIME                 |
+| Event        | extract_events(lang, text)                                  | SRL                           |
+| SemanticLink | extract_semantic_role_link(lang, text)                      | SRL                           |
+| ObjectalLink | extract_objectal_links(lang, text)                          | Maverick                     |
+
+                            
 
 To **change some model used in the supported tools**, just go to text2story/annotators/ANNOTATOR_TO_BE_CHANGED and change the model in the file: \_\_init\_\_.py.
 
@@ -134,15 +145,6 @@ The function load() should load the pipeline to some variable defined by you, so
 
 In the text2story.annotators.\_\_init\_\_.py file, add a call to the load() function, and to the extract functions.
 (See the already implemented tools for guidance.)
-
-Specifically, for annotators like TEI2GO (detailed in its documentation [here](https://github.com/hmosousa/tei2go#-huggingface-hub)), users need to manually install 
-the required model. For example, if you plan to use the English model, execute the following command before loading it into 'text2story':
-
-```
-pip install https://huggingface.co/hugosousa/en_tei2go/resolve/main/en_tei2go-any-py3-none-any.whl
-```
-
-And it should be done.
 
 PS: Don't forget to normalize the labels to our semantic framework!
 

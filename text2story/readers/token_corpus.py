@@ -38,8 +38,8 @@ class TokenCorpus:
         for (type_, attr_map) in self.attr:
             if token_type != None and type_ == token_type:
                 return attr_map.get(attr_name)
-            else:
-                return attr_map.get(attr_name)
+
+
     def is_type(self, token_type):
         for (type_, _) in self.attr:
             if type_ == token_type:

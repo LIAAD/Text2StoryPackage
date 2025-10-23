@@ -30,25 +30,45 @@ def count_elements(fd, element_type):
 
     return count
 
-def build_stats_byelement(doc,  element_type="event", dataset_type="BRAT"):
+def get_attr_repr(attr_value):
+    if type(attr_value) == list:
+        return repr(attr_value)
+    else:
+        return attr_value
+
+def build_stats_byelement(doc,  element_type="event", attr_filter={}, allowed_by_id=[]):
 
     attr_count = {}
     event_id_lst = set()
+    allowed_id_lst = [id for (id, _) in allowed_by_id]
 
     for tok in doc:
+
         for ann_type, attr_map in tok.attr:
+
 
             if ann_type.lower() == element_type:
                 if tok.id_ann[0] not in event_id_lst:
+                    filter_flag = False
                     for attr in attr_map:
+                        # check if the attribute satistifies a given filter
+                        if attr in attr_filter and attr_map[attr] == attr_filter[attr]:
+                            if tok.id_ann[0] not in allowed_id_lst:
+                                filter_flag = True
+                                break # ignore this element if it satisfies the requirement
+
+                        attr_map_value = get_attr_repr(attr_map[attr])
+
                         if attr in attr_count:
-                            if attr_map[attr] in attr_count[attr]:
-                                attr_count[attr][attr_map[attr]] +=  1
-                            else:
-                                attr_count[attr][attr_map[attr]] = 1
+                            attr_count[attr][attr_map_value] = attr_count[attr].get(attr_map_value, 0) + 1
                         else:
-                            attr_count[attr] = {attr_map[attr]:1}
-                    event_id_lst.add(tok.id_ann[0])
+                            attr_count[attr] = {attr_map_value:1}
+
+                    if not(filter_flag):
+                       # if element_type == "quantificacao" and ann_type.lower() == "quantificacao":
+                        #    print("-->", tok.id_ann[0], tok.text, tok.attr)
+                        event_id_lst.add(tok.id_ann[0])
+
 
     return attr_count, len(event_id_lst)
 

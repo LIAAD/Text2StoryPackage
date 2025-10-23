@@ -70,7 +70,6 @@ def load(lang):
             "srl",
             pipeline_class=SrlPipeline,
             pt_model=SRLModel,
-            default={"pt": ("liaad/srl-pt_bertimbau-base_hf", "main")},
             type="text",
         )
         model = AutoModel.from_pretrained(
@@ -82,7 +81,8 @@ def load(lang):
         #  Load the token classification pipeline with a pre-trained model
         pipeline['srl_en'] =  transformers.pipeline("srl", model=model, tokenizer=tokenizer, pipeline_class=SrlPipeline, lang="en")
 
-        pipeline["srl_re_tags"] = r"[BI]-(A\d|ARG\d|AM-[A-Z]+|ARGM-[A-Z]+)"
+        #pipeline["srl_re_tags"] = r"[BI]-(A\d|ARG\d|AM-[A-Z]+|ARGM-[A-Z]+)"
+        pipeline["srl_re_tags"] = r"[BI]-(R-)?(A\d|ARG\d|AM-[A-Z]+|ARGM-[A-Z]+)"
         pipeline["ARGM_STR"] = "ARGM"
 
         # this coreference model is too heavy. Analyze another model to fit here
@@ -181,6 +181,7 @@ def _make_srl_df(lang, text):
         else:
             if lang == "en":
                 result = process_srl_output(pipeline["srl_en"](sent))
+
             elif lang == "pt":
                 result = pipeline["srl_pt"](sent)
                 #  there is a bug for some sentences, that there is no result from the srl?
@@ -247,7 +248,7 @@ def _normalize_sent_tags(sentence_df):
             print("\nNORMALIZATION ERROR - MULTIPLE TAG VALUES FOUND FOR WORD.")
             print(word_vals.values)
             print(sentence_df)
-    #print(">>>",begin_tags, sentence_df)
+    #print(">>>",begin_tags)
     #print("-->",normalized_tags)
     return normalized_tags, begin_tags
 

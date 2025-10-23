@@ -36,13 +36,15 @@ class SrlPipeline(Pipeline):
         # Extract sentence verbs
         doc = self.verb_predictor(sentence)
         #print([token.pos_ for token in doc])
-        verbs = {token.text for token in doc if token.pos_ == "VERB"}
+        verbs = [token.text for token in doc if token.pos_ == "VERB"]
         # If the sentence only contains auxiliary verbs, consider those as the main verbs
-        if not verbs:
-            verbs = {token.text for token in doc if token.pos_ == "AUX"}
+        if verbs == []:
+            verbs = [token.text for token in doc if token.pos_ == "AUX"]
         #print(verbs)
+        # Remove duplicates
+        verbs = list(dict.fromkeys(verbs))
 
-        # Tokenize sentence
+            # Tokenize sentence
         tokens = self.tokenizer.encode_plus(
             sentence,
             truncation=True,

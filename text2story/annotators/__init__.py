@@ -18,7 +18,7 @@ PARTICIPANT_EXTRACTION_TOOLS = {'spacy':['pt','en'], 'nltk':['en'], 'bertnerpt':
 TIME_EXTRACTION_TOOLS = {'py_heideltime':['pt','en']}
 EVENT_EXTRACTION_TOOLS = {"srl":["pt","en"]}
 #OBJECTAL_LINKS_RESOLUTION_TOOLS = {'allennlp':['en']}
-OBJECTAL_LINKS_RESOLUTION_TOOLS = {}
+OBJECTAL_LINKS_RESOLUTION_TOOLS = {'maverick':['en']}
 SEMANTIC_ROLE_LABELLING_TOOLS = {"srl":["pt","en"]}
 
 LOCAL_ANNOTATORS = set()
@@ -114,6 +114,9 @@ def load(lang, tools=None):
     if lang in tools["srl"]  and "srl" in tools:
         from text2story.annotators import SRL
         SRL.load(lang)
+    if lang in tools["maverick"]  and "maverick" in tools:
+        from text2story.annotators import MAVERICK
+        MAVERICK.load(lang)
 
 def get_available_tools():
     return PARTICIPANT_EXTRACTION_TOOLS.keys()+\
@@ -180,6 +183,10 @@ def extract_objectal_links(tool, lang, text):
     if tool in LOCAL_ANNOTATORS:
         local_annotator = importlib.import_module(tool)
         return local_annotator.extract_objectal_links(lang, text)
+
+    if tool == "maverick":
+        from text2story.annotators import MAVERICK
+        return MAVERICK.extract_objectal_links(lang, text)
 
 
     raise InvalidTool

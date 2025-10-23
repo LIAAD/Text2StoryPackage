@@ -430,7 +430,7 @@ class ReadBrat(read.Read):
                         continue
                  
                     fullname = os.path.join(data_dir, p.stem)
-                    # print("-->", fullname)
+                    #print("-->", fullname)
                     token_lst = self.process_file(fullname)
                     self.file_lst.append(fullname + ".txt")
 
