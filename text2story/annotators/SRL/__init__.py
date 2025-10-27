@@ -82,7 +82,7 @@ def load(lang):
         pipeline['srl_en'] =  transformers.pipeline("srl", model=model, tokenizer=tokenizer, pipeline_class=SrlPipeline, lang="en")
 
         #pipeline["srl_re_tags"] = r"[BI]-(A\d|ARG\d|AM-[A-Z]+|ARGM-[A-Z]+)"
-        pipeline["srl_re_tags"] = r"[BI]-(R-)?(A\d|ARG\d|AM-[A-Z]+|ARGM-[A-Z]+)"
+        pipeline["srl_re_tags"] = r"[BI]-(C-)?(R-)?(A\d|ARG\d|AM-[A-Z]+|ARGM-[A-Z]+)"
         pipeline["ARGM_STR"] = "ARGM"
 
         # this coreference model is too heavy. Analyze another model to fit here
