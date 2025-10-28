@@ -1,3 +1,5 @@
+import re
+
 import spacy
 import transformers
 import pandas as pd
@@ -108,10 +110,16 @@ def process_srl_output(srl_output_list):
             for token, label in tokens_with_labels:
                 # Ignore <s> and </s> tokens
                 if token not in ['<s>', '</s>']:
-                    # Remove the leading extra token and add to the list
-                    cleaned_token = token[1:] if token.startswith('Ġ') else token
-                    tokens.append(cleaned_token)
-                    predictions.append(label)
+                    # Remove the leading extra token and add to new token
+                    if token.startswith('Ġ'):
+                         cleaned_token = token[1:]
+                         tokens.append(cleaned_token)
+                         predictions.append(label)
+                    else:
+                        # this token is a continuation of the token before
+                        tokens[-1] += token
+
+
 
             output_dict = {
                 "tokens": tokens,
@@ -371,9 +379,23 @@ def _srl_by_participant(srl_by_token, text, char_offset):
 
         char_spans = []
         for token in rows.index:
-            char_offset = text.find(token, char_offset)
-            char_spans.append(char_offset)
-            char_offset += len(token)
+            match_token = re.match(r'^(\w+)(.*?)$', token)
+            if match_token:
+                word_part = match_token.group(1)  # e.g., "there"
+                punct_part = match_token.group(2)  # e.g., "."
+
+                # Search for word with boundary, followed by the punctuation
+                pattern = r'\b' + re.escape(word_part) + re.escape(punct_part)
+                match = re.search(pattern, text[char_offset:])
+
+                if match:
+                    char_offset = char_offset + match.start()
+                    char_spans.append(char_offset)
+                    char_offset += len(token)
+                else:
+                    char_spans.append(-1)
+            else:
+                char_spans.append(-1)
 
         result_list.append({
             "participant": ' '.join(rows.index), "sem_role_type": sem_role_type,
@@ -468,7 +490,7 @@ def get_participant_tags(text, participant_lst, lang):
 
             tagged_participants_lst.append(((tok.idx, tok.idx + len(tok.text)),tok.pos_,"UNDEF"))
 
-    # it is possible that some participant was not found by the bsearch?
+    # it is possible that some participant was not found by the bsearch? YES
     for idx in range(len(participant_lst)):
         tagged_participants_lst.append(tagged_participants[idx])
 
