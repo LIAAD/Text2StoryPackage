@@ -1,4 +1,5 @@
 import re
+import string
 
 import spacy
 import transformers
@@ -379,8 +380,8 @@ def _srl_by_participant(srl_by_token, text, char_offset):
 
         char_spans = []
         for token in rows.index:
-            if re.match(r'^[^\w\s]+$', token):
-                # Pure punctuation - just do literal search without word boundaries
+            if all(c in string.punctuation or c.isspace() for c in token):
+                # Pure punctuation - literal search
                 pos = text.find(token, char_offset)
                 if pos != -1:
                     char_spans.append(pos)
@@ -388,28 +389,22 @@ def _srl_by_participant(srl_by_token, text, char_offset):
                 else:
                     char_spans.append(-1)
             else:
-                # Contains word characters - use word boundaries
-                # Strip surrounding punctuation but keep internal ones
-                cleaned_token = token.strip('"\'.,;:!? -')
+                # Strip all punctuation from both ends to get the word part
+                word_part = token.strip(string.punctuation)
 
-                if cleaned_token:
-                    pattern = r'\b' + re.escape(cleaned_token) + r'\b'
+                if word_part:
+                    pattern = r'\b' + re.escape(word_part) + r'\b'
                     match = re.search(pattern, text[char_offset:])
 
                     if match:
                         char_offset = char_offset + match.start()
                         char_spans.append(char_offset)
-                        char_offset += len(cleaned_token)
+                        char_offset += len(word_part)
                     else:
                         char_spans.append(-1)
                 else:
-                    # Token was only punctuation after stripping (shouldn't happen with first condition)
-                    pos = text.find(token, char_offset)
-                    if pos != -1:
-                        char_spans.append(pos)
-                        char_offset = pos + len(token)
-                    else:
-                        char_spans.append(-1)
+                    char_spans.append(-1)
+                #print("-->", char_spans, "--", token)
 
         result_list.append({
             "participant": ' '.join(rows.index), "sem_role_type": sem_role_type,
