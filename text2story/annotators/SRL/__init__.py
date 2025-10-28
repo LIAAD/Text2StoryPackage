@@ -379,23 +379,37 @@ def _srl_by_participant(srl_by_token, text, char_offset):
 
         char_spans = []
         for token in rows.index:
-            match_token = re.match(r'^(\w+)(.*?)$', token)
-            if match_token:
-                word_part = match_token.group(1)  # e.g., "there"
-                punct_part = match_token.group(2)  # e.g., "."
-
-                # Search for word with boundary, followed by the punctuation
-                pattern = r'\b' + re.escape(word_part) + re.escape(punct_part)
-                match = re.search(pattern, text[char_offset:])
-
-                if match:
-                    char_offset = char_offset + match.start()
-                    char_spans.append(char_offset)
-                    char_offset += len(token)
+            if re.match(r'^[^\w\s]+$', token):
+                # Pure punctuation - just do literal search without word boundaries
+                pos = text.find(token, char_offset)
+                if pos != -1:
+                    char_spans.append(pos)
+                    char_offset = pos + len(token)
                 else:
                     char_spans.append(-1)
             else:
-                char_spans.append(-1)
+                # Contains word characters - use word boundaries
+                # Strip surrounding punctuation but keep internal ones
+                cleaned_token = token.strip('"\'.,;:!? -')
+
+                if cleaned_token:
+                    pattern = r'\b' + re.escape(cleaned_token) + r'\b'
+                    match = re.search(pattern, text[char_offset:])
+
+                    if match:
+                        char_offset = char_offset + match.start()
+                        char_spans.append(char_offset)
+                        char_offset += len(cleaned_token)
+                    else:
+                        char_spans.append(-1)
+                else:
+                    # Token was only punctuation after stripping (shouldn't happen with first condition)
+                    pos = text.find(token, char_offset)
+                    if pos != -1:
+                        char_spans.append(pos)
+                        char_offset = pos + len(token)
+                    else:
+                        char_spans.append(-1)
 
         result_list.append({
             "participant": ' '.join(rows.index), "sem_role_type": sem_role_type,
