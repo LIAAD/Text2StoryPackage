@@ -85,7 +85,8 @@ def load(lang):
         pipeline['srl_en'] =  transformers.pipeline("srl", model=model, tokenizer=tokenizer, pipeline_class=SrlPipeline, lang="en")
 
         #pipeline["srl_re_tags"] = r"[BI]-(A\d|ARG\d|AM-[A-Z]+|ARGM-[A-Z]+)"
-        pipeline["srl_re_tags"] = r"[BI]-(C-)?(R-)?(A\d|ARG\d|AM-[A-Z]+|ARGM-[A-Z]+)"
+        #pipeline["srl_re_tags"] = r"[BI]-(C-)?(R-)?(A\d|ARG\d|AM-[A-Z]+|ARGM-[A-Z]+)"
+        pipeline["srl_re_tags"] = r"[BI]-(?:C-)?(?:R-)?(?:A\d|ARG\d|AM-[A-Z]+|ARGM-[A-Z]+)"
         pipeline["ARGM_STR"] = "ARGM"
 
         # this coreference model is too heavy. Analyze another model to fit here
@@ -107,16 +108,20 @@ def process_srl_output(srl_output_list):
         for verb, (labels, tokens_with_labels) in srl_output.items():
             tokens = []
             predictions = []
-
+            new_line_flag = False
             for token, label in tokens_with_labels:
                 # Ignore <s> and </s> tokens
                 if token not in ['<s>', '</s>']:
                     # Remove the leading extra token and add to new token
-                    if token.startswith('Ġ'):
-                         cleaned_token = token[1:]
+                    if token.startswith('Ġ') or new_line_flag:
+                         cleaned_token = token.replace('Ġ','')
                          tokens.append(cleaned_token)
                          predictions.append(label)
+                         new_line_flag = False
                     else:
+                        if token == 'Ċ':
+                            new_line_flag = True
+                            continue
                         # this token is a continuation of the token before
                         tokens[-1] += token
 
@@ -248,7 +253,7 @@ def _normalize_sent_tags(sentence_df):
         # b) - ARGM e ARG (o último e mais especifico tem prio)
         # TODO: em português as tags estao ligeiramente diferentes:
         # B-AM-TMP, B-A1, I-A2, etc
-        arg_words = word_vals[word_vals.str.contains(pipeline["srl_re_tags"])]
+        arg_words = word_vals[word_vals.str.contains(pipeline["srl_re_tags"], regex=True)]
         if arg_words.shape[0] != 0:
             normalized_tags.append(arg_words.iloc[-1])  # desempate entre dois ARGM-X diferentes
             begin_tags.append(arg_words.iloc[-1].startswith("B"))
@@ -399,7 +404,9 @@ def _srl_by_participant(srl_by_token, text, char_offset):
                     if match:
                         char_offset = char_offset + match.start()
                         char_spans.append(char_offset)
-                        char_offset += len(word_part)
+                        #char_offset += len(word_part) # raises error if there is punctuation in the end
+                        #char_offset += len(token) # raises eror if there is punctuation in the start of token
+                        char_offset = char_offset - match.start() + match.end()
                     else:
                         char_spans.append(-1)
                 else:
@@ -408,7 +415,7 @@ def _srl_by_participant(srl_by_token, text, char_offset):
 
         result_list.append({
             "participant": ' '.join(rows.index), "sem_role_type": sem_role_type,
-            "char_span": (char_spans[0], char_spans[-1] + len(token))
+            "char_span": (char_spans[0], char_spans[-1] + len(token) - 1)
         })
 
     return result_list, char_offset
@@ -457,6 +464,7 @@ def _srl_pipeline(sentence_df, text, char_offset, verb_tags, event_threshold=3):
     df_by_participant, character_offset = _srl_by_participant(df, text, char_offset)
 
     return df_by_participant, character_offset
+
 def get_participant_tags(text, participant_lst, lang):
     """
     it adds POS tags and NER tags to the participant list
