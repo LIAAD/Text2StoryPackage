@@ -24,29 +24,77 @@ from text2story.annotators.SRL.srl_model.config import SRLModelConfig
 
 ### Global Variables ###
 
-SRL_TYPE_MAPPING = {
-    "TMP": "time",
-    "LOC": "location",
-    "ADV": "theme",  # Adverbial
-    "MNR": "manner",
-    "CAU": "cause",
-    "PRP":"cause",
-    "EXT": "theme",  # should be attribute -> changed for compatibility
-    "DIS": "theme",  # connection of two expressions -> should be theme -> changed for compatibility
-    "PNC": "purpose",
-    "PR": "purpose",
-    "NEG": "theme",  # should be attribute -> changed for compatibility | NEG = negation
-    "DIR": "path",  # should be setting -> changed for compatibility
-    "MOD": "instrument",  # MOD = Modal
-    "PRD": "theme",  # Secondary predicate -> should be attribute -> changed for compatibility
-    "ADJ": "theme",
-    "COM": "agent",  # COM = Comitative -> used to express accompaniment
-    "GOL": "goal",  # GOL = goal
+"""SRL_TYPE_MAPPING = {
+    #"TMP": "time",
+    #"LOC": "location",
+    #"ADV": "theme",  # Adverbial
+    #"MNR": "manner",
+    #"CAU": "cause",
+    #"PRP":"cause",
+    #"EXT": "theme",  # should be attribute -> changed for compatibility
+    #"DIS": "theme",  # connection of two expressions -> should be theme -> changed for compatibility
+    #"PNC": "purpose",
+    #"PR": "purpose",
+    #"NEG": "theme",  # should be attribute -> changed for compatibility | NEG = negation
+    #"DIR": "path",  # should be setting -> changed for compatibility
+    #"MOD": "instrument",  # MOD = Modal
+    #"PRD": "theme",  # Secondary predicate -> should be attribute -> changed for compatibility
+    #"ADJ": "theme",
+    #"COM": "agent",  # COM = Comitative -> used to express accompaniment
+    #"GOL": "goal",  # GOL = goal
     "REC": "instrument",  # REC = reciprocal
     "PAS": "passive", # passive verb
     "NSE": "agent",
-    "TML": "time",
-    "ASP": "theme"
+    #"TML": "time",
+    #"ASP": "theme"
+}"""
+
+SRL_TYPE_MAPPING = {
+    # Time / Location / Path / Goal
+    "TMP": "time",                 # temporal modifier
+    "TML": "time",                 # temporal-locative label variants → still time in practice
+    "LOC": "location",
+    "DIR": "path",                 # direction/path; sometimes "goal" if 'to/into' marks endpoint
+    "GOL": "goal",
+
+    # Cause / Purpose / Reason
+    "CAU": "cause",
+    "PRP": "purpose",              # many tagsets use PRP for purpose; your draft put it under cause
+    "PNC": "purpose",
+    "PR":  "purpose",              # if your data uses PR for purpose, keep it
+
+    # Manner / Means / Instrument / Medium
+    "MNR": "manner",
+    "MEANS": "means",              # (if present in your data)
+    "INS": "instrument",           # (if present)
+    "MED": "medium",               # (if present)
+
+    # Extent / Amount / Distance / Attribute
+    "EXT": "amount",               # degree/extent; if specifically distance, map to "distance"
+    "NEG": "attribute",            # polarity is an attribute, not a role
+    "PRD": "attribute",            # secondary predicate = depictives/resultatives → state/attribute
+    "ADJ": "attribute",            # adjectival predication/modification → attribute
+    "ASP": "attribute",            # aspectual operator (or create SRLINK_aspect if you prefer)
+    # If you keep ADV as a bucket:
+    "ADV": "manner",               # generic adverbials → prefer "manner" over "theme"
+
+    # Participant relations
+    "COM": "partner",              # comitative (with) → accompaniment
+    "REC": "partner",              # reciprocal (each other) → symmetric co-participant
+    "NSE": "agent",                # ⚠️ Ambiguous tag in some corpora; confirm your tagset definition
+    "AGT": "agent",                # (if present)
+    "PAT": "patient",              # (if present)
+    "THM": "theme",                # (if present)
+
+    # Voice / Modality / Discourse → not roles
+    "PAS": "attribute",            # voice/diathesis → better as attribute (or SRLINK_voice)
+    "MOD": "attribute",            # modality (can/could/might) → not instrument
+    "DIS": "attribute",            # discourse connective → not a thematic role
+
+    # Other plausible mappings in your inventory
+    # "SRC": "source",             # if present
+    # "GOL": "goal",               # already mapped above
+    # "PRP": "purpose",            # already mapped above
 }
 pipeline = {}
 
@@ -389,7 +437,7 @@ def _srl_by_participant(srl_by_token, text, char_offset):
                 # Pure punctuation - literal search
                 pos = text.find(token, char_offset)
                 if pos != -1:
-                    char_spans.append(pos)
+                    char_spans.append((pos, pos + len(token)))
                     char_offset = pos + len(token)
                 else:
                     char_spans.append(-1)
@@ -402,11 +450,13 @@ def _srl_by_participant(srl_by_token, text, char_offset):
                     match = re.search(pattern, text[char_offset:])
 
                     if match:
-                        char_offset = char_offset + match.start()
-                        char_spans.append(char_offset)
+                        start_match = char_offset + match.start()
+                        end_match = char_offset + match.end()
+
+                        char_spans.append((start_match, end_match))
                         #char_offset += len(word_part) # raises error if there is punctuation in the end
                         #char_offset += len(token) # raises eror if there is punctuation in the start of token
-                        char_offset = char_offset - match.start() + match.end()
+                        char_offset = end_match
                     else:
                         char_spans.append(-1)
                 else:
@@ -415,7 +465,7 @@ def _srl_by_participant(srl_by_token, text, char_offset):
 
         result_list.append({
             "participant": ' '.join(rows.index), "sem_role_type": sem_role_type,
-            "char_span": (char_spans[0], char_spans[-1] + len(token) - 1)
+            "char_span": (char_spans[0][0], char_spans[-1][1]) # the start of the first token in the span, and the end of the last token in the span
         })
 
     return result_list, char_offset
