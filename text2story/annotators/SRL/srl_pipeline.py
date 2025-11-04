@@ -66,10 +66,18 @@ class SrlPipeline(Pipeline):
             "verb": "",
         }
 
+        #model_inputs = [
+        #     {**model_input} for _ in verbs
+        #]  # Create a new dictionary for each verb
         model_inputs = [
-            {**model_input} for _ in verbs
-        ]  # Create a new dictionary for each verb
-
+            {
+                "input_ids": input_ids,
+                "attention_mask": attention_mask,
+                "token_type_ids": [],
+                "tokens": tokens_lst,
+                "verb": ""
+            } for _ in verbs
+        ]
         for i, verb in enumerate(verbs):
             model_inputs[i]["verb"] = verb
             token_type_ids = model_inputs[i]["token_type_ids"]
@@ -112,9 +120,15 @@ class SrlPipeline(Pipeline):
                 attention_mask=model_input["attention_mask"],
                 token_type_ids=model_input["token_type_ids"],
             )
-            output["verb"] = model_input["verb"]
-            output["tokens"] = model_input["tokens"]
-            outputs.append(output)
+            #output["verb"] = model_input["verb"]
+            #output["tokens"] = model_input["tokens"]
+            output_dict = {
+                "class_probabilities": output["class_probabilities"],  # ou output.class_probabilities
+                "attention_mask": model_input["attention_mask"],  # ✅ Adicione isto!
+                "verb": model_input["verb"],
+                "tokens": model_input["tokens"]
+            }
+            outputs.append(output_dict)
         return outputs
 
     def postprocess(self, model_outputs):
