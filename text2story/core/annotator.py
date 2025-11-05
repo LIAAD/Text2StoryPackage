@@ -124,7 +124,7 @@ class Annotator:
             # For the lexical head and type we will accumulate the results and latter choose the best following a criterion
             actor_lexical_heads          = [annotations[tool_id][idxs[tool_id]][1]]
             actor_types                  = [annotations[tool_id][idxs[tool_id]][2]]
-            print("-->", text[actor_start_character_offset:actor_end_character_offset], " -- ", actor_types)
+            #print("-->", text[actor_start_character_offset:actor_end_character_offset], " -- ", actor_types)
 
             idxs[tool_id] += 1 # Consume the annotation
 

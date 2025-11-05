@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.poetry]
 name = "text2story"
-version = "1.6.8.2"
+version = "1.6.8.6"
 readme = "README.md"
 long_description = "file: README.md"
 long_description_content_type = "text/markdown"
