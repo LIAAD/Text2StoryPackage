@@ -515,6 +515,30 @@ def _srl_pipeline(sentence_df, text, char_offset, verb_tags, event_threshold=3):
 
     return df_by_participant, character_offset
 
+
+def classify_semantic(tok):
+    if tok.ent_type_ != '':
+        return tok.ent_type_.lower().capitalize()
+    if tok.pos_ == 'PRON':
+        return 'Pronoun'
+    elif tok.pos_ == 'DET':
+        return 'Determiner'
+    elif tok.pos_ == 'NOUN':
+        return 'NominalPhrase'
+    elif tok.pos_ == 'VERB':
+        if 'Infinitive' in tok.tag_ or tok.tag_ in ['VB', 'VINF']:
+            return 'PurposeClause'
+        return 'Clause'
+    elif tok.pos_ in ['ADP', 'PART']:
+        next_token = tok.nbor(1) if tok.i + 1 < len(tok.doc) else None
+        if next_token and next_token.pos_ == 'VERB':
+            if 'Infinitive' in next_token.tag_ or next_token.tag_ in ['VB', 'VINF']:
+                return 'PurposeClause'
+    if hasattr(tok, 'dep_') and tok.dep_ in ['xcomp', 'advcl', 'obl:purpose']:
+        return 'PurposeClause'
+    return 'Arg'
+
+
 def get_participant_tags(text, participant_lst, lang):
     """
     it adds POS tags and NER tags to the participant list
@@ -534,36 +558,29 @@ def get_participant_tags(text, participant_lst, lang):
 
     doc = pipeline[lang](text)
     tagged_participants_lst = []
+
+    for idx, offset_participant in enumerate(participant_lst):
+        span = doc.char_span(offset_participant[0], offset_participant[1])
+        if span:
+            head = span.root
+            semantic_class = classify_semantic(head)
+            tagged_participants[idx] = (offset_participant, head.pos_, semantic_class)
+
+        # Tokens fora dos spans
     for tok in doc:
         pos = bsearch_tuplelist(tok.idx, participant_lst)
+        if pos == -1:
+            tagged_participants_lst.append(((tok.idx, tok.idx + len(tok.text)), tok.pos_, "UNDEF"))
 
-        if pos != -1:
-
-            # only update the tag value with the lexical head of the
-            # participant
-
-            if pos not in tagged_participants:
-                offset_participant = participant_lst[pos]
-                if tok.ent_type_ == '':
-                    tagged_participants[pos] = (offset_participant, tok.pos_, 'Arg')
-                else:
-                    tagged_participants[pos] = (offset_participant, tok.pos_,tok.ent_type_.lower().capitalize())
-            else:
-                # if there is a token inside the text span that  has a NER tag, then replace the ner tag with more specific than UNDEF
-                offset_participant, pos_tag, ner_tag = tagged_participants[pos]
-                if ner_tag == 'Arg' and tok.ent_type_ != '':
-                    tagged_participants[pos] = (offset_participant, tok.pos_, tok.ent_type_.lower().capitalize())
-        else:
-
-            tagged_participants_lst.append(((tok.idx, tok.idx + len(tok.text)),tok.pos_,"UNDEF"))
-
-    # it is possible that some participant was not found by the bsearch? YES
+        # Adiciona os participantes encontrados
     for idx in range(len(participant_lst)):
-        tagged_participants_lst.append(tagged_participants[idx])
+        if idx in tagged_participants:
+            tagged_participants_lst.append(tagged_participants[idx])
 
-    tagged_participants_lst.sort(key=lambda x:x[0][0])
-
+    tagged_participants_lst.sort(key=lambda x: x[0][0])
     return tagged_participants_lst
+
+
 
 def extract_participants(lang, text):
     """

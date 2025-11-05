@@ -124,6 +124,7 @@ class Annotator:
             # For the lexical head and type we will accumulate the results and latter choose the best following a criterion
             actor_lexical_heads          = [annotations[tool_id][idxs[tool_id]][1]]
             actor_types                  = [annotations[tool_id][idxs[tool_id]][2]]
+            print("-->", text[actor_start_character_offset:actor_end_character_offset], " -- ", actor_types)
 
             idxs[tool_id] += 1 # Consume the annotation
 
@@ -168,16 +169,16 @@ class Annotator:
                 continue # Discard the actor if it's lexical head isn't a 'Noun' or 'Pronoun'
 
             # For the NE, we also favor specifics NEs, in this case all labels versus the NE 'OTHER' and we take the most common.
-            rmv_other_ne = [ne for ne in actor_types if ne != 'Other' or ne != 'Arg']
+            rmv_other_ne = [ne for ne in actor_types if ne not in ['Other','Arg']]
             if rmv_other_ne:
                 actor_type = max(rmv_other_ne, key=rmv_other_ne.count)
             else:
                 actor_type = 'Other'
 
-            # Discard entities with types other than 'Per', 'Org', 'Loc', 'Obj', 'Nat' & 'Other'.
+            # Discard entities with types other than 'Per', 'Org', 'Loc', 'Obj', 'Nat' .
             # if it is Agr, it was an argument of an semantic role labeling event
             # Used, typically, to eliminate dates and durations incorrectly identified as an actor.
-            if actor_type.lower() in ['arg','per', 'org', 'loc', 'obj', 'nat', 'other','person','gpe']:
+            if actor_type.lower() in ['per', 'org', 'loc', 'obj', 'nat', 'gpe','nominalphrase','determiner']:
                 final_annotation.append(((actor_start_character_offset, actor_end_character_offset), actor_lexical_head, actor_type))
 
         return final_annotation
