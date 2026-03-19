@@ -181,6 +181,13 @@ def merge_dicts(d1, d2):
             else:
                 d1[k2] = {attr:d2[k2][attr]}
 
+def merge_dicts_count(d1,d2):
+    for k2 in d2:
+        if k2 in d1:
+            d1[k2] += d2[k2]
+        else:
+            d1[k2] = d2[k2]
+
 def capfirst(s):
     return s[:1].upper() + s[1:]
 

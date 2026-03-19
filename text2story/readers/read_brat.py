@@ -690,7 +690,7 @@ class ReadBrat(read.Read):
                         # the relation for the reference ref
                         for rel_id, rel_type, ref_arg,argn in ann_rel[ref]:
                             try:
-                                rel_obj = token_corpus.TokenRelation(rel_id, ref2tok[ref_arg], rel_type, argn, ref_arg)
+                                rel_obj = token_corpus.TokenRelation(rel_id, ref2tok[ref_arg], rel_type, argn, ref,ref_arg)
                                 mytok.relations.append(rel_obj)
                             except KeyError:
                                 print(f"Warning: The {rel_id} was not included in the doc since {ref_arg} was not found as annotation.")

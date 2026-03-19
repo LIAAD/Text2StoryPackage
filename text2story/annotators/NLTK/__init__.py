@@ -11,19 +11,58 @@ from text2story.core.exceptions import InvalidLanguage
 
 import nltk
 from nltk import word_tokenize, sent_tokenize, pos_tag, ne_chunk, tree2conlltags
+from nltk.data import find
 
 
-def load(lang):
+def load(lang, allow_download=False):
     """
-    Used, at start, to load the pipeline for the supported languages.
-    """
-    if lang == "en":
-        nltk.download("maxent_ne_chunker")
-        nltk.download('maxent_ne_chunker_tab')
+    Load NLTK resources for supported languages.
 
-        nltk.download('averaged_perceptron_tagger_eng')
-        nltk.download('averaged_perceptron_tagger')
-        nltk.download("words")
+    Parameters
+    ----------
+    lang : str
+        Language code (currently supports "en").
+    allow_download : bool, optional
+        If True, download missing resources (requires internet).
+        Default is False (safe for offline / HPC usage).
+
+    Raises
+    ------
+    RuntimeError
+        If required NLTK resources are missing and downloads are disabled.
+    """
+
+    if lang != "en":
+        return
+
+    resources = {
+        "chunkers/maxent_ne_chunker": "maxent_ne_chunker",
+        "taggers/averaged_perceptron_tagger": "averaged_perceptron_tagger",
+        # Optional / version-dependent
+        "taggers/averaged_perceptron_tagger_eng": "averaged_perceptron_tagger_eng",
+        "corpora/words": "words",
+    }
+
+    missing = []
+
+    for path, name in resources.items():
+        try:
+            find(path)
+        except LookupError:
+            if allow_download:
+                nltk.download(name)
+            else:
+                missing.append(path)
+
+    if missing:
+        raise RuntimeError(
+            "Missing required NLTK resources:\n"
+            + "\n".join(missing)
+            + "\n\nPlease install them using:\n"
+            ">>> import nltk\n"
+            ">>> nltk.download(<resource>)\n"
+            "or run load(lang='en', allow_download=True) on a machine with internet."
+        )
 
 
 def extract_participants(lang, text):

@@ -50,9 +50,10 @@ class TokenRelation:
     """
     Specifies a Relation between tokens
     """
-    def __init__(self, rel_id, toks = [], rel_type = None, argn = None, arg_id = None):
+    def __init__(self, rel_id, toks = [], rel_type = None, argn = None, argn_id = None, arg_id = None):
         self.rel_id = rel_id
         self.toks = toks
         self.rel_type = rel_type
         self.argn = argn
+        self.argn_id =   argn_id
         self.arg_id = arg_id

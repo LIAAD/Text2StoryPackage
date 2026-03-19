@@ -16,6 +16,7 @@ from nltk.inference import TableauProver
 from nltk.sem.drt import *
 from text2story.brat2viz.brat import file_parser
 # %%
+from .temporal_inference_engine import integrate_inference_engine
 
 dexpr = DrtExpression.fromstring
 
@@ -42,8 +43,6 @@ def read_file(filename):
 
     content = [x.strip().replace('\t', ' ') for x in content]
     return content
-
-
 
 # assign a variable for each event
 def assign_variable(ann_dict):
@@ -98,8 +97,7 @@ def attributes_events(dexpr_list, ann_dict):
 
     for x in ann_dict:
 
-        if x['ann_type'] == 'Attribute' and \
-                x['tag_ref'][0] == 'E':
+        if x['ann_type'] == 'Attribute':
             for i, y in enumerate(dexpr_list):
 
                 if y[0].get('event_tag_id') == x['tag_ref']:
@@ -397,6 +395,7 @@ def process(file_name):
     dexpr_list, f_parser = assign_variable(f_parser)
     dr_set, dexpr_list = attributes_events(dexpr_list, f_parser)
     dexpr_list = event_event_relation(f_parser, dexpr_list)
+    dexpr_list, inferred = integrate_inference_engine(f_parser, dexpr_list, min_confidence=0.6)
 
     # actors = get_actors(f_parser)
     actors, actors_sr = actors_relation(f_parser)
@@ -428,6 +427,7 @@ def main(ann_dir):
         dexpr_list, f_parser = assign_variable(f_parser)
         dr_set, dexpr_list = attributes_events(dexpr_list, f_parser)
         dexpr_list = event_event_relation(f_parser, dexpr_list)
+        dexpr_list, inferred = integrate_inference_engine(f_parser, dexpr_list, min_confidence=0.6)
 
         # actors = get_actors(f_parser)
         actors, actors_sr = actors_relation(f_parser)

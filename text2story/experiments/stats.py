@@ -3,6 +3,10 @@ import os
 import sys
 
 from pathlib import Path
+
+from markdown_it.common.entities import entities
+from typer.models import NoneType
+
 from text2story.readers.read_brat import  ReadBrat
 from nltk import word_tokenize
 
@@ -44,33 +48,117 @@ def build_stats_byelement(doc,  element_type="event", attr_filter={}, allowed_by
 
     for tok in doc:
 
-        for ann_type, attr_map in tok.attr:
+        if tok.is_type(element_type):
 
-
-            if ann_type.lower() == element_type:
+            for attr_type, attr_map in tok.attr:
                 if tok.id_ann[0] not in event_id_lst:
                     filter_flag = False
-                    for attr in attr_map:
-                        # check if the attribute satistifies a given filter
-                        if attr in attr_filter and attr_map[attr] == attr_filter[attr]:
-                            if tok.id_ann[0] not in allowed_id_lst:
-                                filter_flag = True
-                                break # ignore this element if it satisfies the requirement
 
-                        attr_map_value = get_attr_repr(attr_map[attr])
-
-                        if attr in attr_count:
-                            attr_count[attr][attr_map_value] = attr_count[attr].get(attr_map_value, 0) + 1
-                        else:
-                            attr_count[attr] = {attr_map_value:1}
-
+                    # checking if the annotation should be filtered of the statiscs
+                    filtered_attrs = set(attr_filter.keys()) & set(attr_map.keys())
+                    # if has some of filtered attributes, check if has the filtered value
+                    for attr in filtered_attrs:
+                        # all values should be filtered or the specified value only
+                        if attr_filter[attr] is None or \
+                                (attr_map[attr] == attr_filter[attr]) or \
+                                (attr_map[attr] in attr_filter[attr]): # list of options
+                            filter_flag = True
+                            break
+                    # if this annotation should not be filtered, lets counting its numbers
                     if not(filter_flag):
-                       # if element_type == "quantificacao" and ann_type.lower() == "quantificacao":
-                        #    print("-->", tok.id_ann[0], tok.text, tok.attr)
+                        for attr in attr_map:
+                            attr_map_value = get_attr_repr(attr_map[attr])
+
+
+                            if attr in attr_count:
+                                attr_count[attr][attr_map_value] = attr_count[attr].get(attr_map_value, 0) + 1
+                            else:
+                                attr_count[attr] = {attr_map_value:1}
+
                         event_id_lst.add(tok.id_ann[0])
+                        break
+
 
 
     return attr_count, len(event_id_lst)
+
+def build_stats_entity_attributes(doc,type="event",filter={},attr_lst=["Class","Event_Type",\
+                                                               "Pos","Tense","Aspect",\
+                                                               "VForm","Mood","Modality",\
+                                                               "Polarity","Movement","Factuality"]):
+    """
+    It counts the combination of attributes of a given entity type
+    @param doc: a document as list of TokenCorpus
+    @param type: the of entity as string
+    @param attr: a list of string of name of attributes to be counted
+    @return:
+    """
+    attr_counts = {}
+    entity_set = set()
+    for tok in doc:
+        for idx, (ann_type, attr_map) in enumerate(tok.attr):
+            if ann_type.lower() == type and tok.id_ann[idx] not in entity_set:
+
+                # filter the entity given an attribute name and value
+                filtered_attrs = set(filter.keys()) & set(attr_map.keys())
+                filter_entity_flag = False
+                if len(filtered_attrs) != 0:
+                    for fattr in filtered_attrs:
+                        if attr_map[fattr] == filter[fattr] or\
+                                attr_map[fattr] in filter[fattr] :
+                            filter_entity_flag = True
+                else:
+                    filter_entity_flag = True # this is the None case, should be filtered as well
+                if filter_entity_flag:
+                    continue
+
+                attr_combination = tuple([attr_map.get(attr_name, None) for attr_name in attr_lst])
+                if attr_combination in attr_counts:
+                    attr_counts[attr_combination] += 1
+                else:
+                    attr_counts[attr_combination] = 1
+                entity_set.add(tok.id_ann[idx])
+
+    return attr_counts
+
+
+
+def build_stats_byrelation_tuple(doc,  type1="event", type2="participant"):
+    """
+    Given two type of entities, build the stats of their relation
+    @param doc:
+    @param element_type:
+    @param attr_filter:
+    @param allowed_by_id:
+    @return:
+    """
+
+    rel_count = {}
+    relation_id_lst = set()
+    entity1_set = set()
+    entity2_set = set()
+
+    for tok1 in doc:
+
+        for ann_type, attr_map in tok1.attr:
+            if ann_type.lower() == type1:
+
+                # if has attributes, has annotation, and thus relations
+                for rel in tok1.relations:
+                    if rel.rel_id not in relation_id_lst:
+                        for tok2 in rel.toks:
+                            for ann_type2, attr_map2 in tok2.attr:
+                                if ann_type2.lower() == type2:
+                                    if rel.rel_type in rel_count:
+                                        rel_count[rel.rel_type] += 1
+                                    else:
+                                        rel_count[rel.rel_type] = 1
+                                    entity1_set.add(tok1.id_ann[0])
+                                    entity2_set.add(tok2.id_ann[0])
+                                    relation_id_lst.add(rel.rel_id)
+
+
+    return rel_count, len(entity1_set), len(entity2_set)
 
 def build_stats_byrelation(doc):
     rel_stats = {}
@@ -84,6 +172,8 @@ def build_stats_byrelation(doc):
                 maintype = rel_type[0]
                 subtype = rel_type[1]
 
+                rel_set.add(rel.rel_id)
+
                 if maintype in rel_stats:
                     if subtype in rel_stats[maintype]:
                         rel_stats[maintype][subtype] += 1
@@ -93,6 +183,120 @@ def build_stats_byrelation(doc):
                     rel_stats[maintype] = {subtype:1}
 
     return rel_stats
+
+def build_stats_byrelationtype_entity(doc, relation_type,attr_keys):
+    """
+    Given the relation type, it counts the type of the entities according to an attribute this relation connects
+    @param doc:
+    @return:
+    """
+    rel_stats = {}
+    rel_set = set()
+    entities_stats = {}
+
+    for tok in doc:
+        for rel in tok.relations:
+            if rel.rel_id not in rel_set and\
+                rel.rel_type.lower().startswith(relation_type):
+                rel_set.add(rel.rel_id)
+
+                rel_type = rel.rel_type.split("_")
+                maintype = rel_type[0]
+                subtype = rel_type[1]
+
+                if maintype in rel_stats:
+                    if subtype in rel_stats[maintype]:
+                        rel_stats[maintype][subtype] += 1
+                    else:
+                        rel_stats[maintype][subtype] = 1
+                else:
+                    rel_stats[maintype] = {subtype:1}
+                try:
+                    attr_map = tok.attr[0][1]
+                    attr_map_arg = rel.toks[0].attr[0][1]
+
+                    attr_value = set(attr_map.keys()) & attr_keys
+                    attr_value_arg = set(attr_map_arg.keys()) & attr_keys
+                    if len(attr_value) == 0:
+                        attr_value = None
+                    else:
+                        attr_value = attr_value.pop()
+                    if len(attr_value_arg) == 0:
+                        attr_value_arg = None
+                    else:
+                        attr_value_arg = attr_value_arg.pop()
+
+                    if rel.argn == "arg1":
+                        relation_triple = (attr_value_arg, attr_value, rel.rel_type)
+
+                        if attr_value_arg == "Evento_Tipo":
+                            print("-->",relation_triple, tok.text, tok.id_ann, rel.rel_id)
+                    else:
+                        relation_triple =  (attr_value, attr_value_arg, rel.rel_type)
+
+                        if attr_value == "Evento_Tipo":
+                            print("-->",relation_triple, tok.text, tok.id_ann, rel.rel_id)
+
+                    if relation_triple in entities_stats:
+                        entities_stats[relation_triple] += 1
+                    else:
+                        entities_stats[relation_triple] = 1
+                except KeyError:
+                    continue
+
+    return rel_stats, entities_stats
+
+def build_stats_byrelationentity(doc, relation_type,attr_type,attr_type_arg=None):
+    """
+    Given the relation type, it counts the type of the entities according to an attribute this relation connects
+    @param doc:
+    @return:
+    """
+    rel_stats = {}
+    rel_set = set()
+    entities_stats = {}
+
+    for tok in doc:
+        for rel in tok.relations:
+            if rel.rel_id not in rel_set and\
+                rel.rel_type.lower().startswith(relation_type):
+
+                rel_type = rel.rel_type.split("_")
+                maintype = rel_type[0]
+                subtype = rel_type[1]
+
+                rel_set.add(rel.rel_id)
+
+                if maintype in rel_stats:
+                    if subtype in rel_stats[maintype]:
+                        rel_stats[maintype][subtype] += 1
+                    else:
+                        rel_stats[maintype][subtype] = 1
+                else:
+                    rel_stats[maintype] = {subtype:1}
+                try:
+                    if attr_type in tok.attr[0][1]:
+                        attr_map = tok.attr[0][1][attr_type]
+                    else:
+                        attr_map = tok.attr[0][1][attr_type_arg]
+
+                    if attr_type in rel.toks[0].attr[0][1]:
+                        attr_map_arg = rel.toks[0].attr[0][1][attr_type]
+                    else:
+                        attr_map_arg = rel.toks[0].attr[0][1][attr_type_arg]
+
+                    if (attr_map, attr_map_arg,rel.rel_type) in entities_stats:
+                        entities_stats[(attr_map, attr_map_arg,rel.rel_type)] += 1
+                    else:
+                        if (attr_map_arg, attr_map,rel.rel_type) in entities_stats:
+                            entities_stats[(attr_map_arg, attr_map,rel.rel_type)] += 1
+                        else:
+                            entities_stats[(attr_map, attr_map_arg,rel.rel_type)] = 1
+                except KeyError:
+                    continue
+
+    return rel_stats, entities_stats
+
 
 def build_stats_byelement_batch(data_dir, element_type="event", dataset_type="BRAT"):
     """

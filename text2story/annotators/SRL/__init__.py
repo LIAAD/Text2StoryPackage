@@ -14,7 +14,7 @@ nltk.download('punkt')
 
 from itertools import zip_longest
 
-from text2story.core.utils import bsearch_tuplelist
+from text2story.core.utils import bsearch_tuplelist, capfirst
 from transformers.pipelines import PIPELINE_REGISTRY
 
 from text2story.annotators.SRL.srl_pipeline import SrlPipeline
@@ -111,9 +111,9 @@ def load(lang):
         pipeline["srl_re_tags"] = r".*[A][0-9]|AM"
         pipeline["ARGM_STR"] = "B-AM"
         # since allennlp does not have NER, download the spacy model
-        if not (spacy.util.is_package('pt_core_news_lg')):
-            spacy.cli.download('pt_core_news_lg')
-        pipeline["pt"] = spacy.load('pt_core_news_lg')
+        if not (spacy.util.is_package('pt_core_news_trf')):
+            spacy.cli.download('pt_core_news_trf')
+        pipeline["pt"] = spacy.load('pt_core_news_trf')
 
     elif lang == "en":
 
@@ -140,7 +140,9 @@ def load(lang):
         # this coreference model is too heavy. Analyze another model to fit here
         #pipeline['coref_en'] =transformers.pipeline(model="VincentNLP/seq2seq-coref-t0-3b-partial-linear",
         #                                       trust_remote_code=True)
-        pipeline['en'] = spacy.load('en_core_web_lg')
+        if not (spacy.util.is_package('en_core_web_trf')):
+            spacy.cli.download('en_core_web_trf')
+        pipeline['en'] = spacy.load('en_core_web_trf')
 
 
 def process_srl_output(srl_output_list):
@@ -538,6 +540,67 @@ def classify_semantic(tok):
         return 'PurposeClause'
     return 'Arg'
 
+def get_events_tags(text, events_lst, lang):
+    """
+    it adds morphological attributes of events list
+
+    @param text: the original text to be processed as narrative
+    @param list[tuple[int,int]]: A list of character span of the event
+    candidates
+    Returns
+    ------
+    list[tuple[tuple[int, int], str, str]]
+       a list of events of narratives, where the first is the character
+       span of that participant, the second elements is the POS tag, anf third
+       element is the NER tag, if it is a entity
+    """
+    # this maps suits the text2story annotation scheme
+    map_tense = {"Pres":"Present",
+                 "Past":"Past",
+                 "Fut":"Future"}
+    map_vform = {"Part":"Participle",
+                 "Ger":"Gerundive",
+                 "Inf":"Infinitive",
+                 "Fin":None}
+    map_aspect = {"Prog":"Progressive",
+                  "Perf":"Perfective",
+                  "Imp":"Imperfective"}
+    map_mood = {"Ind":None,
+                "Sub":"Subjunctive",
+                "Imp":"Imperative"}
+    event_lst = sorted(events_lst, key=lambda x:x[0])
+    tagged_events = {}
+
+    doc = pipeline[lang](text)
+    tagged_events_lst = []
+
+    for idx, offset_event in enumerate(event_lst):
+        span = doc.char_span(offset_event[0], offset_event[1])
+        if span:
+            head = span.root
+            semantic_class = classify_semantic(head)
+            pos = capfirst(head.pos_.lower())
+            tense = map_tense[head.morph.get("Tense")[0]] if head.morph.get("Tense") else None
+            aspect = map_aspect[head.morph.get("Aspect")[0]] if head.morph.get("Aspect") else None
+            vform = map_vform[head.morph.get("VerbForm")[0]] if head.morph.get("VerbForm") else None
+            mood = map_mood[head.morph.get("Mood")[0]] if head.morph.get("Mood") else None
+
+            tagged_events[idx] = (offset_event,
+                                  {"pos":pos,
+                                   "tense":tense,
+                                   "aspect":aspect,
+                                   "vform":vform,
+                                   "mood":mood
+                                   }
+                                  )
+
+    for idx in range(len(events_lst)):
+        if idx in tagged_events:
+            tagged_events_lst.append(tagged_events[idx])
+    tagged_events_lst.sort(key=lambda x: x[0][0])
+    return tagged_events_lst
+
+
 
 def get_participant_tags(text, participant_lst, lang):
     """
@@ -643,7 +706,12 @@ def extract_events(lang, text):
     srl_df = pd.DataFrame(srl_participants_list)
     if len(srl_df) == 0:
         return []
-    return srl_df[srl_df["sem_role_type"] == "EVENT"]
+    events_df = srl_df[srl_df["sem_role_type"] == "EVENT"]
+    events_lst = events_df["char_span"].values.tolist()
+    events_tagged_lst = get_events_tags(text,events_lst, lang)
+
+    return events_tagged_lst
+    #return srl_df[srl_df["sem_role_type"] == "EVENT"]
 
 def extract_semantic_role_links(lang, text):
     dfs_by_sent = _make_srl_df(lang, text)

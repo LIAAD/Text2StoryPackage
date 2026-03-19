@@ -90,7 +90,7 @@ class EventEntity:
         if hasattr(self, "Event_Type"):
             event_type = self.__getattribute__("Event_Type")
             # deafult value for event_type
-            setattr(self, "Event_Type","Process")
+            #setattr(self, "Event_Type","Process")
 
         #self.factuality = "Factual"
         #self.tense = "Pres"

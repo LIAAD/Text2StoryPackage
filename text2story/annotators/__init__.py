@@ -13,11 +13,10 @@ from collections import ChainMap
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-PARTICIPANT_EXTRACTION_TOOLS = {'spacy':['pt','en'], 'nltk':['en'], 'bertnerpt':['pt'], 'dbpedia':['pt','en'],'srl':['pt','en']}
+PARTICIPANT_EXTRACTION_TOOLS = {'spacy':['pt','en'], 'nltk':['en'], 'bertnerpt':['pt'], 'dbpedia':['pt','en'],'srl':['pt','en'],'lusa':['en']}
 #TIME_EXTRACTION_TOOLS = {'py_heideltime':['pt','en'], 'tei2go':['pt','en','it','de','es','fr']}
-TIME_EXTRACTION_TOOLS = {'py_heideltime':['pt','en']}
-EVENT_EXTRACTION_TOOLS = {"srl":["pt","en"]}
-#OBJECTAL_LINKS_RESOLUTION_TOOLS = {'allennlp':['en']}
+TIME_EXTRACTION_TOOLS = {'py_heideltime':['pt','en'],'lusa':['en']}
+EVENT_EXTRACTION_TOOLS = {"srl":["pt","en"],"lusa":["en"]}
 OBJECTAL_LINKS_RESOLUTION_TOOLS = {'maverick':['en']}
 SEMANTIC_ROLE_LABELLING_TOOLS = {"srl":["pt","en"]}
 
@@ -105,9 +104,9 @@ def load(lang, tools=None):
     if lang in tools["bertnerpt"] and "bertnerpt" in tools:
         from text2story.annotators import BERTNERPT
         BERTNERPT.load(lang)
-    #if lang in tools["tei2go"]  and "tei2go" in tools:
-    #    from text2story.annotators import TEI2GO
-    #    TEI2GO.load(lang)
+    if lang in tools["lusa"]  and "lusa" in tools:
+        from text2story.annotators import LUSA
+        LUSA.load(lang)
     if lang in tools["dbpedia"]  and "dbpedia" in tools:
         from text2story.annotators import DBPEDIA
         DBPEDIA.load(lang)
@@ -155,9 +154,12 @@ def extract_participants(tool, lang, text, url=None):
     elif tool == 'dbpedia':
         from text2story.annotators import DBPEDIA
         return DBPEDIA.extract_participants(text, lang, url)
-    if tool == 'srl':
+    elif tool == 'srl':
         from text2story.annotators import SRL
         return SRL.extract_participants(lang, text)
+    elif tool == 'lusa':
+        from text2story.annotators import LUSA
+        return LUSA.extract_participants(lang, text)
     else:
         raise InvalidTool
 
@@ -171,9 +173,9 @@ def extract_times(tool, lang, text, publication_time):
     if tool == 'py_heideltime':
         from text2story.annotators import PY_HEIDELTIME
         return PY_HEIDELTIME.extract_times(lang, text, publication_time)
-    elif tool == 'tei2go':
-        from text2story.annotators import TEI2GO
-        return TEI2GO.extract_times(lang, text)
+    elif tool == 'lusa':
+        from text2story.annotators import LUSA
+        return LUSA.extract_times(lang, text, publication_time)
 
     raise InvalidTool
 
@@ -203,6 +205,9 @@ def extract_events(tool, lang, text):
     if tool == 'srl':
         from text2story.annotators import SRL
         return SRL.extract_events(lang, text)
+    if tool == "lusa":
+        from text2story.annotators import LUSA
+        return LUSA.extract_events(lang, text)
 
     raise InvalidTool
 

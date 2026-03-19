@@ -178,8 +178,11 @@ class Annotator:
             # Discard entities with types other than 'Per', 'Org', 'Loc', 'Obj', 'Nat' .
             # if it is Agr, it was an argument of an semantic role labeling event
             # Used, typically, to eliminate dates and durations incorrectly identified as an actor.
-            if actor_type.lower() in ['per', 'org', 'loc', 'obj', 'nat', 'gpe','nominalphrase','determiner']:
-                final_annotation.append(((actor_start_character_offset, actor_end_character_offset), actor_lexical_head, actor_type))
+            if actor_type.lower() in ['per', 'org', 'loc', 'obj', 'nat', \
+                                      'gpe','nominalphrase','determiner',\
+                                        'participant']: # this is when the model was trained to find participants
+                final_annotation.append(((actor_start_character_offset, actor_end_character_offset), \
+                                         actor_lexical_head, actor_type))
 
         return final_annotation
 
@@ -213,8 +216,29 @@ class Annotator:
             self.tools = TIME_EXTRACTION_TOOLS_LANG
             nr_tools = len(self.tools)
 
-        # NOTE: The extraction is done with only one tool, so the result in just the extraction done by the tool
-        times = extract_times(self.tools[0], lang, text, publication_time) # :: [(time_start_offset, time_end_offset, time_type, time_value)]
+        times = []
+        for i in range(nr_tools):
+            times_tool = extract_times(self.tools[0], lang, text, publication_time) # :: [(time_start_offset, time_end_offset, time_type, time_value)]
+            
+            times2append = []
+            # do a simple merge of time expressions
+            for ((start,end),time_type, time_txt) in times_tool:
+
+                new_type = None
+                new_time_txt = None
+                duplicate_times_idx = -1
+                for idx,((start_times, end_times), time_type, time_txt) in enumerate(times):
+                     if (start, end) == (start_times, end_times):
+                         new_type = time_type
+                         new_time_txt = time_txt
+                         duplicate_times_idx = idx
+                         break
+
+                if duplicate_times_idx != -1:
+                    times[duplicate_times_idx] = ((start, end),new_type, new_time_txt)
+                else:
+                    times2append.append(((start,end), time_type, time_txt))
+            times.extend(times2append)
         return times
 
     def extract_events(self, lang, text):
@@ -236,7 +260,27 @@ class Annotator:
             self.tools = EVENT_EXTRACTION_TOOLS_LANG
             nr_tools = len(self.tools)
 
-        events = extract_events(self.tools[0], lang, text)
+        events = []
+        for i in range(nr_tools):
+            events_tool = extract_events(self.tools[i], lang, text)
+            events2append = []
+
+            for ((start,end),attrs) in events_tool:
+
+                new_attrs = {}
+                duplicate_event_idx = -1
+                for idx,((start_event, end_event), attrs_event) in enumerate(events):
+                     if (start, end) == (start_event, end_event):
+                         new_attrs = attrs_event
+                         duplicate_event_idx = idx
+                         break
+
+                if duplicate_event_idx != -1:
+                    events[duplicate_event_idx] = ((start, end), attrs | new_attrs)
+                else:
+                    events2append.append(((start,end),attrs))
+
+            events.extend(events2append)
         return events
 
     def extract_objectal_links(self, lang, text):

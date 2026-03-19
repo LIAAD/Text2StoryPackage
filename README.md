@@ -100,6 +100,7 @@ with open('annotations.ann', "w") as fd:
       |   |   NLTK
       |   │   PY_HEIDELTIME
       |   |   BERTNERPT
+      |   |   LUSA
       |   |   MAVERICK
       |   |   DBPEDIA
       |   |   SPACY
@@ -129,11 +130,11 @@ E.g., if they are extracting participants, then they implement a function named 
 
 | Extractions  | Interface                                                   | Supporting tools              |
 |--------------|-------------------------------------------------------------|-------------------------------|
-| Participant  | extract_participants(lang, text, url(optional for DBPedia)) | SPACY,  NLTK , SRL, BERTNERPT |
-| Timexs       | extract_timexs(lang, text, publication_time)                | PY_HEIDELTIME                 |
-| Event        | extract_events(lang, text)                                  | SRL                           |
+| Participant  | extract_participants(lang, text, url(optional for DBPedia)) | SPACY,  NLTK , SRL, BERTNERPT, LUSA |
+| Timexs       | extract_timexs(lang, text, publication_time)                | PY_HEIDELTIME, LUSA           |
+| Event        | extract_events(lang, text)                                  | SRL, LUSA                     |
 | SemanticLink | extract_semantic_role_link(lang, text)                      | SRL                           |
-| ObjectalLink | extract_objectal_links(lang, text)                          | Maverick                     |
+| ObjectalLink | extract_objectal_links(lang, text)                          | Maverick                      |
 
                             
 

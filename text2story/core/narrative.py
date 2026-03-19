@@ -296,10 +296,12 @@ class Narrative:
             self.events = []
             return []
 
-        for event in events.itertuples():
+        for event in events:
+            start_event = event[0][0]
+            end_event = event[0][1]
+            event_text = self.text[start_event:end_event]
             self.events["T" + str(self._id)
-                        ] = EventEntity(event.participant, event.char_span, event_class="Occurrence",\
-                                        polarity="Pos", factuality="Factual",tense="Pres")
+                        ] = EventEntity(event_text, (start_event, end_event), **event[1])
             self._id += 1
 
         return self.events
@@ -687,7 +689,7 @@ class Narrative:
 
             attr_dct = vars(event)
             for att in attr_dct:
-                if att != "character_span" and att != "text":
+                if att != "character_span" and att != "text" and attr_dct[att] is not None:
                     r += (f"A{attribute_id}\t{capfirst(att)} {event_id} {attr_dct[att]}\n")
                     attribute_id += 1
 
